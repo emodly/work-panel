@@ -28,10 +28,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 .msg { font-size: 13px; text-align: center; min-height: 20px; margin-top: 10px; line-height: 1.5; }
 .msg.error { color: var(--danger); }
 .msg.success { color: var(--success); }
+.code-display { background: #EEF2FF; border: 2px dashed var(--primary); border-radius: var(--radius); padding: 16px; margin: 12px 0; text-align: center; display: none; }
+.code-display .big-code { font-size: 36px; font-weight: 700; color: var(--primary); letter-spacing: 12px; font-family: monospace; }
+.code-display .code-hint { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 .invite-box { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; text-align: center; display: none; }
 .invite-box .icode { font-size: 22px; font-weight: 700; color: #166534; letter-spacing: 2px; font-family: monospace; }
 .invite-box .ihint { font-size: 11px; color: #166534; margin-top: 4px; }
-#inviteGroup, #codeGroup, #regPwdGroup, #loginPwd { display: none; }
+#inviteGroup, #codeGroup, #regPwdGroup, #loginPwd, #codeDisplay { display: none; }
 </style>
 </head>
 <body>
@@ -48,42 +51,41 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     </div>
 
     <form id="authForm">
-      <!-- 账号 -->
       <div class="fg">
         <label id="accountLabel">用户名 / 邮箱</label>
         <input type="text" id="account" placeholder="输入用户名或邮箱" autocomplete="username">
         <div class="fh" id="accountHint"></div>
       </div>
 
-      <!-- 登录密码 -->
       <div class="fg" id="loginPwd">
         <label>密码</label>
         <input type="password" id="password" placeholder="请输入密码" minlength="6" maxlength="64">
       </div>
 
-      <!-- 注册邮箱用：验证码 -->
-      <div class="fg" id="codeGroup">
-        <label>邮箱验证码</label>
-        <input type="text" id="verifyCode" placeholder="输入邮件中的 6 位验证码" maxlength="6" inputmode="numeric" style="letter-spacing:8px;text-align:center;font-size:20px;">
-        <div class="fh" style="color:var(--success);">验证码已发送，5 分钟内有效</div>
+      <!-- 验证码展示 -->
+      <div class="code-display" id="codeDisplay">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;">📧 你的验证码（5 分钟有效）：</div>
+        <div class="big-code" id="bigCode"></div>
+        <div class="code-hint">将此验证码填入下方输入框完成验证</div>
       </div>
 
-      <!-- 注册密码 -->
+      <div class="fg" id="codeGroup">
+        <label>验证码</label>
+        <input type="text" id="verifyCode" placeholder="输入上方显示的验证码" maxlength="6" inputmode="numeric" style="letter-spacing:6px;text-align:center;font-size:18px;">
+      </div>
+
       <div class="fg" id="regPwdGroup">
         <label>设置密码</label>
         <input type="password" id="regPassword" placeholder="设置登录密码（至少6位）" minlength="6" maxlength="64">
       </div>
 
-      <!-- 用户名注册：邀请码 -->
       <div class="fg" id="inviteGroup">
         <label>邀请码</label>
         <input type="text" id="inviteCode" placeholder="输入邀请码（必填）" maxlength="20" style="text-transform:uppercase;letter-spacing:2px;">
       </div>
 
       <button type="submit" class="btn btn-primary" id="submitBtn">登 录</button>
-
-      <!-- 邮箱注册：发验证码按钮 -->
-      <button type="button" class="btn btn-primary" id="sendCodeBtn" style="display:none;">发送验证码</button>
+      <button type="button" class="btn btn-primary" id="sendCodeBtn" style="display:none;">获取验证码</button>
 
       <div class="invite-box" id="inviteBox">
         <div style="font-size:13px;color:#166534;margin-bottom:4px;">🎉 注册成功！你的邀请码（可分享 3 人）：</div>
@@ -106,6 +108,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
   var inviteBox = document.getElementById('inviteBox');
   var inviteGroup = document.getElementById('inviteGroup');
   var codeGroup = document.getElementById('codeGroup');
+  var codeDisplay = document.getElementById('codeDisplay');
   var regPwdGroup = document.getElementById('regPwdGroup');
   var loginPwd = document.getElementById('loginPwd');
   var accountLabel = document.getElementById('accountLabel');
@@ -113,7 +116,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
   var accountInput = document.getElementById('account');
   var supabase;
   var mode = 'login';
-  var emailRegStep = 0; // 0=enter email, 1=enter code, 2=set pwd
+  var emailRegStep = 0;
   var regEmail = '';
 
   if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID') >= 0) {
@@ -126,9 +129,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 
   function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
+  function genCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
+
   function showLoginUI() {
     loginPwd.style.display = 'block';
     codeGroup.style.display = 'none';
+    codeDisplay.style.display = 'none';
     regPwdGroup.style.display = 'none';
     inviteGroup.style.display = 'none';
     sendCodeBtn.style.display = 'none';
@@ -136,27 +142,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     btnEl.textContent = '登 录';
   }
 
-  // Detect input type for registration
   accountInput.addEventListener('input', function() {
     if (mode !== 'register') return;
     var v = this.value.trim();
     emailRegStep = 0;
     if (isEmail(v)) {
       accountLabel.textContent = '邮箱';
-      accountHint.textContent = '将发送验证码至此邮箱';
+      accountHint.textContent = '点击获取验证码完成注册';
       accountHint.style.color = 'var(--success)';
       inviteGroup.style.display = 'none';
       codeGroup.style.display = 'none';
+      codeDisplay.style.display = 'none';
       regPwdGroup.style.display = 'none';
       sendCodeBtn.style.display = 'block';
-      sendCodeBtn.textContent = '发送验证码';
+      sendCodeBtn.textContent = '获取验证码';
       btnEl.style.display = 'none';
     } else if (v.length > 0) {
       accountLabel.textContent = '用户名';
-      accountHint.textContent = '用户名注册需要邀请码';
+      accountHint.textContent = '需要邀请码才能注册';
       accountHint.style.color = 'var(--text-muted)';
       inviteGroup.style.display = 'block';
       codeGroup.style.display = 'none';
+      codeDisplay.style.display = 'none';
       regPwdGroup.style.display = 'block';
       sendCodeBtn.style.display = 'none';
       btnEl.style.display = 'flex';
@@ -166,6 +173,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
       accountHint.textContent = '';
       inviteGroup.style.display = 'none';
       codeGroup.style.display = 'none';
+      codeDisplay.style.display = 'none';
       regPwdGroup.style.display = 'none';
       sendCodeBtn.style.display = 'none';
       btnEl.style.display = 'flex';
@@ -173,7 +181,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     }
   });
 
-  // Tabs
   document.getElementById('tabLogin').addEventListener('click', function() {
     mode = 'login'; emailRegStep = 0;
     document.getElementById('tabLogin').classList.add('active');
@@ -184,6 +191,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     msgEl.textContent = ''; msgEl.className = 'msg';
     inviteBox.style.display = 'none';
     accountInput.value = '';
+    accountInput.readOnly = false;
   });
 
   document.getElementById('tabRegister').addEventListener('click', function() {
@@ -194,6 +202,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     accountHint.textContent = '';
     loginPwd.style.display = 'none';
     codeGroup.style.display = 'none';
+    codeDisplay.style.display = 'none';
     regPwdGroup.style.display = 'none';
     inviteGroup.style.display = 'none';
     sendCodeBtn.style.display = 'none';
@@ -202,40 +211,41 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     msgEl.textContent = ''; msgEl.className = 'msg';
     inviteBox.style.display = 'none';
     accountInput.value = '';
+    accountInput.readOnly = false;
   });
 
-  // Send verification code (email registration - step 1)
+  // Generate and show verification code
   sendCodeBtn.addEventListener('click', async function() {
     var email = accountInput.value.trim();
     if (!isEmail(email)) return;
 
     sendCodeBtn.disabled = true;
-    sendCodeBtn.textContent = '发送中...';
+    sendCodeBtn.textContent = '生成中...';
     msgEl.className = 'msg'; msgEl.textContent = '';
 
-    try {
-      var result = await supabase.auth.signInWithOtp({
-        email: email,
-        options: { shouldCreateUser: true }
-      });
-      if (result.error) throw result.error;
+    var code = genCode();
 
-      regEmail = email;
-      emailRegStep = 1;
-      sendCodeBtn.style.display = 'none';
-      codeGroup.style.display = 'block';
-      regPwdGroup.style.display = 'block';
-      btnEl.style.display = 'flex';
-      btnEl.textContent = '验证并注册';
-      msgEl.className = 'msg success';
-      msgEl.textContent = '✅ 验证码已发送至 ' + email;
-      accountInput.readOnly = true;
-    } catch (err) {
-      msgEl.className = 'msg error';
-      msgEl.textContent = err.message || '发送失败';
-      sendCodeBtn.disabled = false;
-      sendCodeBtn.textContent = '重新发送';
-    }
+    // Store in database
+    var ins = await supabase.from('verification_codes').insert({
+      email: email,
+      code: code
+    });
+    if (ins.error) { msgEl.className = 'msg error'; msgEl.textContent = '存储验证码失败: ' + ins.error.message; sendCodeBtn.disabled = false; sendCodeBtn.textContent = '重试'; return; }
+
+    regEmail = email;
+    emailRegStep = 1;
+
+    // Show the code
+    document.getElementById('bigCode').textContent = code;
+    codeDisplay.style.display = 'block';
+    sendCodeBtn.style.display = 'none';
+    codeGroup.style.display = 'block';
+    regPwdGroup.style.display = 'block';
+    btnEl.style.display = 'flex';
+    btnEl.textContent = '验证并注册';
+    accountInput.readOnly = true;
+    msgEl.className = 'msg success';
+    msgEl.textContent = '验证码已生成，5 分钟内有效';
   });
 
   // Submit
@@ -250,11 +260,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     btnEl.disabled = true;
 
     try {
-      // ========== LOGIN ==========
       if (mode === 'login') {
         var pwd = document.getElementById('password').value;
         if (!pwd) { msgEl.className = 'msg error'; msgEl.textContent = '请输入密码'; btnEl.disabled = false; return; }
-
         btnEl.textContent = '登录中...';
         var email = account;
         if (!isEmail(account)) {
@@ -265,7 +273,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
         var result = await supabase.auth.signInWithPassword({ email: email, password: pwd });
         if (result.error) {
           if (result.error.message.indexOf('Invalid login') >= 0) throw new Error('密码错误');
-          if (result.error.message.indexOf('Email not confirmed') >= 0) throw new Error('邮箱未验证，请先完成注册');
           throw result.error;
         }
         window.location.href = 'app.html';
@@ -276,55 +283,73 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
       var isEmailReg = isEmail(account);
 
       if (isEmailReg) {
-        // -- 邮箱注册：验证码 + 密码 --
         if (emailRegStep !== 1) {
-          msgEl.className = 'msg error';
-          msgEl.textContent = '请先点击"发送验证码"';
-          btnEl.disabled = false;
-          return;
+          msgEl.className = 'msg error'; msgEl.textContent = '请先点击"获取验证码"';
+          btnEl.disabled = false; return;
         }
 
         var code = document.getElementById('verifyCode').value.trim();
         var pwd = document.getElementById('regPassword').value;
-        if (!code || code.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请输入 6 位验证码'; btnEl.disabled = false; return; }
+        if (!code) { msgEl.className = 'msg error'; msgEl.textContent = '请输入验证码'; btnEl.disabled = false; return; }
         if (!pwd || pwd.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请设置密码（至少6位）'; btnEl.disabled = false; return; }
 
         btnEl.textContent = '验证中...';
 
-        // Verify OTP
-        var verifyResult = await supabase.auth.verifyOtp({ email: regEmail, token: code, type: 'email' });
-        if (verifyResult.error) throw new Error('验证码错误或已过期');
+        // Verify code from database
+        var vc = await supabase.from('verification_codes')
+          .select('*')
+          .eq('email', regEmail)
+          .eq('code', code)
+          .eq('used', false)
+          .gte('expires_at', new Date().toISOString())
+          .maybeSingle();
 
-        // Now logged in via OTP - set password
-        var pwdResult = await supabase.auth.updateUser({ password: pwd });
-        if (pwdResult.error) throw pwdResult.error;
+        if (vc.error || !vc.data) throw new Error('验证码错误或已过期，请重新获取');
 
-        var userId = verifyResult.data.user.id;
+        // Mark as used
+        await supabase.from('verification_codes').update({ used: true }).eq('id', vc.data.id);
+
+        // Create user
         var uname = regEmail.split('@')[0].replace(/[^a-zA-Z0-9一-鿿_-]/g, '').substring(0, 15) + '_' + Math.random().toString(36).slice(2, 5);
 
+        var result = await supabase.auth.signUp({
+          email: regEmail,
+          password: pwd,
+          options: { data: { username: uname } }
+        });
+        if (result.error) throw result.error;
+        if (!result.data.user) throw new Error('注册失败');
+
+        var userId = result.data.user.id;
         await supabase.from('profiles').insert({ id: userId, username: uname });
         var cr = await supabase.rpc('generate_invitation_code', { p_user_id: userId });
 
-        if (cr.data) { document.getElementById('myInviteCode').textContent = cr.data; inviteBox.style.display = 'block'; btnEl.style.display = 'none'; setTimeout(function() { window.location.href = 'app.html'; }, 3500); }
-        else { window.location.href = 'app.html'; }
+        if (result.data.session) {
+          if (cr.data) { document.getElementById('myInviteCode').textContent = cr.data; inviteBox.style.display = 'block'; btnEl.style.display = 'none'; setTimeout(function() { window.location.href = 'app.html'; }, 3500); }
+          else { window.location.href = 'app.html'; }
+        } else {
+          msgEl.className = 'msg success';
+          msgEl.textContent = '✅ 注册成功！请切换到登录页登录';
+          btnEl.disabled = false; btnEl.textContent = '注 册';
+          setTimeout(function() { document.getElementById('tabLogin').click(); accountInput.value = uname; }, 1500);
+        }
 
       } else {
-        // -- 用户名注册：邀请码 + 密码 --
+        // Username registration with invite code
         var inviteCode = document.getElementById('inviteCode').value.trim();
         var pwd = document.getElementById('regPassword').value;
         if (!inviteCode) { msgEl.className = 'msg error'; msgEl.textContent = '需要邀请码'; btnEl.disabled = false; return; }
         if (!pwd || pwd.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请设置密码（至少6位）'; btnEl.disabled = false; return; }
 
         btnEl.textContent = '验证邀请码...';
-
         var codeCheck = await supabase.from('invitation_codes').select('*').eq('code', inviteCode.toUpperCase()).maybeSingle();
         if (codeCheck.error || !codeCheck.data) throw new Error('邀请码无效');
         if (codeCheck.data.used_count >= codeCheck.data.max_uses) throw new Error('邀请码已达使用上限（3人）');
 
         var uname = account;
         var fakeEmail = uname + '@wp.user';
-
         btnEl.textContent = '注册中...';
+
         var result = await supabase.auth.signUp({ email: fakeEmail, password: pwd, options: { data: { username: uname } } });
         if (result.error) throw result.error;
         if (!result.data.user) throw new Error('注册失败');
@@ -351,15 +376,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
       msgEl.textContent = err.message || '操作失败';
       btnEl.disabled = false;
       if (mode === 'register') {
-        btnEl.textContent = isEmail(accountInput.value.trim()) ? '验证并注册' : '注 册';
-        if (isEmail(accountInput.value.trim())) {
+        var v = accountInput.value.trim();
+        btnEl.textContent = isEmail(v) ? '验证并注册' : '注 册';
+        if (isEmail(v) && emailRegStep < 1) {
           sendCodeBtn.style.display = 'block';
           sendCodeBtn.disabled = false;
-          sendCodeBtn.textContent = '重新发送';
+          sendCodeBtn.textContent = '获取验证码';
         }
-      } else {
-        btnEl.textContent = '登 录';
-      }
+      } else { btnEl.textContent = '登 录'; }
     }
   });
 })();
