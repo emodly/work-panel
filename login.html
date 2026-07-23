@@ -13,14 +13,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 .login-header .logo { font-size: 36px; margin-bottom: 6px; }
 .login-header h1 { font-size: 22px; font-weight: 700; }
 .card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 28px 26px; }
-.tabs { display: flex; margin-bottom: 22px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
+.tabs { display: flex; margin-bottom: 18px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
 .tab-btn { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); transition: var(--transition); }
 .tab-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
-.form-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; }
-.form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
-.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+.fg { margin-bottom: 14px; }
+.fg label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+.fg input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; }
+.fg input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.fh { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 .btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition); }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-dark); }
@@ -31,7 +31,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 .invite-box { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; text-align: center; display: none; }
 .invite-box .icode { font-size: 22px; font-weight: 700; color: #166534; letter-spacing: 2px; font-family: monospace; }
 .invite-box .ihint { font-size: 11px; color: #166534; margin-top: 4px; }
-#inviteGroup { display: none; }
+#inviteGroup, #codeGroup, #regPwdGroup, #loginPwd { display: none; }
 </style>
 </head>
 <body>
@@ -48,24 +48,42 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     </div>
 
     <form id="authForm">
-      <div class="form-group">
+      <!-- 账号 -->
+      <div class="fg">
         <label id="accountLabel">用户名 / 邮箱</label>
         <input type="text" id="account" placeholder="输入用户名或邮箱" autocomplete="username">
-        <div class="form-hint" id="accountHint"></div>
+        <div class="fh" id="accountHint"></div>
       </div>
 
-      <!-- 邀请码（仅用户名注册时显示） -->
-      <div class="form-group" id="inviteGroup">
-        <label>邀请码</label>
-        <input type="text" id="inviteCode" placeholder="输入邀请码（用户名注册必填）" maxlength="20" style="text-transform:uppercase;letter-spacing:2px;">
-      </div>
-
-      <div class="form-group">
+      <!-- 登录密码 -->
+      <div class="fg" id="loginPwd">
         <label>密码</label>
-        <input type="password" id="password" placeholder="请输入密码（至少6位）" minlength="6" maxlength="64" autocomplete="current-password">
+        <input type="password" id="password" placeholder="请输入密码" minlength="6" maxlength="64">
+      </div>
+
+      <!-- 注册邮箱用：验证码 -->
+      <div class="fg" id="codeGroup">
+        <label>邮箱验证码</label>
+        <input type="text" id="verifyCode" placeholder="输入邮件中的 6 位验证码" maxlength="6" inputmode="numeric" style="letter-spacing:8px;text-align:center;font-size:20px;">
+        <div class="fh" style="color:var(--success);">验证码已发送，5 分钟内有效</div>
+      </div>
+
+      <!-- 注册密码 -->
+      <div class="fg" id="regPwdGroup">
+        <label>设置密码</label>
+        <input type="password" id="regPassword" placeholder="设置登录密码（至少6位）" minlength="6" maxlength="64">
+      </div>
+
+      <!-- 用户名注册：邀请码 -->
+      <div class="fg" id="inviteGroup">
+        <label>邀请码</label>
+        <input type="text" id="inviteCode" placeholder="输入邀请码（必填）" maxlength="20" style="text-transform:uppercase;letter-spacing:2px;">
       </div>
 
       <button type="submit" class="btn btn-primary" id="submitBtn">登 录</button>
+
+      <!-- 邮箱注册：发验证码按钮 -->
+      <button type="button" class="btn btn-primary" id="sendCodeBtn" style="display:none;">发送验证码</button>
 
       <div class="invite-box" id="inviteBox">
         <div style="font-size:13px;color:#166534;margin-bottom:4px;">🎉 注册成功！你的邀请码（可分享 3 人）：</div>
@@ -84,75 +102,140 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
 (function() {
   var msgEl = document.getElementById('msg');
   var btnEl = document.getElementById('submitBtn');
+  var sendCodeBtn = document.getElementById('sendCodeBtn');
   var inviteBox = document.getElementById('inviteBox');
   var inviteGroup = document.getElementById('inviteGroup');
+  var codeGroup = document.getElementById('codeGroup');
+  var regPwdGroup = document.getElementById('regPwdGroup');
+  var loginPwd = document.getElementById('loginPwd');
   var accountLabel = document.getElementById('accountLabel');
   var accountHint = document.getElementById('accountHint');
   var accountInput = document.getElementById('account');
   var supabase;
   var mode = 'login';
+  var emailRegStep = 0; // 0=enter email, 1=enter code, 2=set pwd
+  var regEmail = '';
 
   if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID') >= 0) {
-    msgEl.className = 'msg error'; msgEl.textContent = '请先配置 supabase-config.js'; btnEl.disabled = true; return;
+    msgEl.className = 'msg error'; msgEl.textContent = '请先配置 supabase-config.js'; return;
   }
   try {
     if (!window.supabase) throw new Error('SDK 未加载');
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } catch(e) {
-    msgEl.className = 'msg error'; msgEl.textContent = '初始化失败: ' + e.message; btnEl.disabled = true; return;
-  }
+  } catch(e) { msgEl.className = 'msg error'; msgEl.textContent = '初始化失败: ' + e.message; return; }
 
   function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-  // Detect input type on typing
+  function showLoginUI() {
+    loginPwd.style.display = 'block';
+    codeGroup.style.display = 'none';
+    regPwdGroup.style.display = 'none';
+    inviteGroup.style.display = 'none';
+    sendCodeBtn.style.display = 'none';
+    btnEl.style.display = 'flex';
+    btnEl.textContent = '登 录';
+  }
+
+  // Detect input type for registration
   accountInput.addEventListener('input', function() {
     if (mode !== 'register') return;
     var v = this.value.trim();
+    emailRegStep = 0;
     if (isEmail(v)) {
-      // Email registration
       accountLabel.textContent = '邮箱';
       accountHint.textContent = '将发送验证码至此邮箱';
       accountHint.style.color = 'var(--success)';
       inviteGroup.style.display = 'none';
+      codeGroup.style.display = 'none';
+      regPwdGroup.style.display = 'none';
+      sendCodeBtn.style.display = 'block';
+      sendCodeBtn.textContent = '发送验证码';
+      btnEl.style.display = 'none';
     } else if (v.length > 0) {
-      // Username registration
       accountLabel.textContent = '用户名';
       accountHint.textContent = '用户名注册需要邀请码';
       accountHint.style.color = 'var(--text-muted)';
       inviteGroup.style.display = 'block';
+      codeGroup.style.display = 'none';
+      regPwdGroup.style.display = 'block';
+      sendCodeBtn.style.display = 'none';
+      btnEl.style.display = 'flex';
+      btnEl.textContent = '注 册';
     } else {
       accountLabel.textContent = '用户名 / 邮箱';
       accountHint.textContent = '';
       inviteGroup.style.display = 'none';
+      codeGroup.style.display = 'none';
+      regPwdGroup.style.display = 'none';
+      sendCodeBtn.style.display = 'none';
+      btnEl.style.display = 'flex';
+      btnEl.textContent = '注 册';
     }
   });
 
   // Tabs
   document.getElementById('tabLogin').addEventListener('click', function() {
-    mode = 'login';
+    mode = 'login'; emailRegStep = 0;
     document.getElementById('tabLogin').classList.add('active');
     document.getElementById('tabRegister').classList.remove('active');
     accountLabel.textContent = '用户名 / 邮箱';
     accountHint.textContent = '';
-    inviteGroup.style.display = 'none';
-    btnEl.textContent = '登 录';
-    btnEl.style.display = 'flex';
+    showLoginUI();
     msgEl.textContent = ''; msgEl.className = 'msg';
     inviteBox.style.display = 'none';
+    accountInput.value = '';
   });
 
   document.getElementById('tabRegister').addEventListener('click', function() {
-    mode = 'register';
+    mode = 'register'; emailRegStep = 0;
     document.getElementById('tabRegister').classList.add('active');
     document.getElementById('tabLogin').classList.remove('active');
     accountLabel.textContent = '用户名 / 邮箱';
     accountHint.textContent = '';
+    loginPwd.style.display = 'none';
+    codeGroup.style.display = 'none';
+    regPwdGroup.style.display = 'none';
     inviteGroup.style.display = 'none';
-    btnEl.textContent = '注 册';
+    sendCodeBtn.style.display = 'none';
     btnEl.style.display = 'flex';
+    btnEl.textContent = '注 册';
     msgEl.textContent = ''; msgEl.className = 'msg';
     inviteBox.style.display = 'none';
     accountInput.value = '';
+  });
+
+  // Send verification code (email registration - step 1)
+  sendCodeBtn.addEventListener('click', async function() {
+    var email = accountInput.value.trim();
+    if (!isEmail(email)) return;
+
+    sendCodeBtn.disabled = true;
+    sendCodeBtn.textContent = '发送中...';
+    msgEl.className = 'msg'; msgEl.textContent = '';
+
+    try {
+      var result = await supabase.auth.signInWithOtp({
+        email: email,
+        options: { shouldCreateUser: true }
+      });
+      if (result.error) throw result.error;
+
+      regEmail = email;
+      emailRegStep = 1;
+      sendCodeBtn.style.display = 'none';
+      codeGroup.style.display = 'block';
+      regPwdGroup.style.display = 'block';
+      btnEl.style.display = 'flex';
+      btnEl.textContent = '验证并注册';
+      msgEl.className = 'msg success';
+      msgEl.textContent = '✅ 验证码已发送至 ' + email;
+      accountInput.readOnly = true;
+    } catch (err) {
+      msgEl.className = 'msg error';
+      msgEl.textContent = err.message || '发送失败';
+      sendCodeBtn.disabled = false;
+      sendCodeBtn.textContent = '重新发送';
+    }
   });
 
   // Submit
@@ -162,27 +245,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
     inviteBox.style.display = 'none';
 
     var account = accountInput.value.trim();
-    var password = document.getElementById('password').value;
-    var inviteCode = document.getElementById('inviteCode').value.trim();
-
     if (!account) { msgEl.className = 'msg error'; msgEl.textContent = '请输入用户名或邮箱'; return; }
-    if (!password || password.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '密码至少 6 位'; return; }
 
     btnEl.disabled = true;
-    btnEl.textContent = '处理中...';
 
     try {
       // ========== LOGIN ==========
       if (mode === 'login') {
+        var pwd = document.getElementById('password').value;
+        if (!pwd) { msgEl.className = 'msg error'; msgEl.textContent = '请输入密码'; btnEl.disabled = false; return; }
+
+        btnEl.textContent = '登录中...';
         var email = account;
         if (!isEmail(account)) {
           var r = await supabase.rpc('get_email_by_username', { p_username: account });
           if (r.error || !r.data) throw new Error('用户不存在');
           email = r.data;
         }
-        var result = await supabase.auth.signInWithPassword({ email: email, password: password });
+        var result = await supabase.auth.signInWithPassword({ email: email, password: pwd });
         if (result.error) {
           if (result.error.message.indexOf('Invalid login') >= 0) throw new Error('密码错误');
+          if (result.error.message.indexOf('Email not confirmed') >= 0) throw new Error('邮箱未验证，请先完成注册');
           throw result.error;
         }
         window.location.href = 'app.html';
@@ -193,84 +276,90 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC'
       var isEmailReg = isEmail(account);
 
       if (isEmailReg) {
-        // -- 邮箱注册：发验证码，无需邀请码 --
-        var emailAddr = account;
-        var uname = emailAddr.split('@')[0].replace(/[^a-zA-Z0-9一-鿿_-]/g, '').substring(0, 15);
-        uname = uname + '_' + Math.random().toString(36).slice(2, 5);
-
-        var result = await supabase.auth.signUp({
-          email: emailAddr,
-          password: password,
-          options: { data: { username: uname } }
-        });
-        if (result.error) throw result.error;
-        if (!result.data.user) throw new Error('注册失败');
-
-        if (result.data.session) {
-          // Auto-login
-          await supabase.from('profiles').insert({ id: result.data.user.id, username: uname });
-          var cr = await supabase.rpc('generate_invitation_code', { p_user_id: result.data.user.id });
-          if (cr.data) { document.getElementById('myInviteCode').textContent = cr.data; inviteBox.style.display = 'block'; btnEl.style.display = 'none'; setTimeout(function() { window.location.href = 'app.html'; }, 3500); }
-          else { window.location.href = 'app.html'; }
-        } else {
-          msgEl.className = 'msg success';
-          msgEl.textContent = '✅ 验证码已发送至 ' + emailAddr + '，请查收邮件';
+        // -- 邮箱注册：验证码 + 密码 --
+        if (emailRegStep !== 1) {
+          msgEl.className = 'msg error';
+          msgEl.textContent = '请先点击"发送验证码"';
           btnEl.disabled = false;
-          btnEl.textContent = '注 册';
+          return;
         }
 
-      } else {
-        // -- 用户名注册：必须有邀请码 --
-        if (!inviteCode) { msgEl.className = 'msg error'; msgEl.textContent = '用户名注册需要邀请码'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
+        var code = document.getElementById('verifyCode').value.trim();
+        var pwd = document.getElementById('regPassword').value;
+        if (!code || code.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请输入 6 位验证码'; btnEl.disabled = false; return; }
+        if (!pwd || pwd.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请设置密码（至少6位）'; btnEl.disabled = false; return; }
 
-        // Validate invitation code
+        btnEl.textContent = '验证中...';
+
+        // Verify OTP
+        var verifyResult = await supabase.auth.verifyOtp({ email: regEmail, token: code, type: 'email' });
+        if (verifyResult.error) throw new Error('验证码错误或已过期');
+
+        // Now logged in via OTP - set password
+        var pwdResult = await supabase.auth.updateUser({ password: pwd });
+        if (pwdResult.error) throw pwdResult.error;
+
+        var userId = verifyResult.data.user.id;
+        var uname = regEmail.split('@')[0].replace(/[^a-zA-Z0-9一-鿿_-]/g, '').substring(0, 15) + '_' + Math.random().toString(36).slice(2, 5);
+
+        await supabase.from('profiles').insert({ id: userId, username: uname });
+        var cr = await supabase.rpc('generate_invitation_code', { p_user_id: userId });
+
+        if (cr.data) { document.getElementById('myInviteCode').textContent = cr.data; inviteBox.style.display = 'block'; btnEl.style.display = 'none'; setTimeout(function() { window.location.href = 'app.html'; }, 3500); }
+        else { window.location.href = 'app.html'; }
+
+      } else {
+        // -- 用户名注册：邀请码 + 密码 --
+        var inviteCode = document.getElementById('inviteCode').value.trim();
+        var pwd = document.getElementById('regPassword').value;
+        if (!inviteCode) { msgEl.className = 'msg error'; msgEl.textContent = '需要邀请码'; btnEl.disabled = false; return; }
+        if (!pwd || pwd.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '请设置密码（至少6位）'; btnEl.disabled = false; return; }
+
+        btnEl.textContent = '验证邀请码...';
+
         var codeCheck = await supabase.from('invitation_codes').select('*').eq('code', inviteCode.toUpperCase()).maybeSingle();
-        if (codeCheck.error || !codeCheck.data) { msgEl.className = 'msg error'; msgEl.textContent = '邀请码无效'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
-        if (codeCheck.data.used_count >= codeCheck.data.max_uses) { msgEl.className = 'msg error'; msgEl.textContent = '邀请码已达使用上限（3人）'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
+        if (codeCheck.error || !codeCheck.data) throw new Error('邀请码无效');
+        if (codeCheck.data.used_count >= codeCheck.data.max_uses) throw new Error('邀请码已达使用上限（3人）');
 
         var uname = account;
         var fakeEmail = uname + '@wp.user';
 
-        var result = await supabase.auth.signUp({
-          email: fakeEmail,
-          password: password,
-          options: { data: { username: uname } }
-        });
+        btnEl.textContent = '注册中...';
+        var result = await supabase.auth.signUp({ email: fakeEmail, password: pwd, options: { data: { username: uname } } });
         if (result.error) throw result.error;
         if (!result.data.user) throw new Error('注册失败');
 
         var userId = result.data.user.id;
-
-        // Create profile
         var pResult = await supabase.from('profiles').insert({ id: userId, username: uname });
-        if (pResult.error) {
-          if (pResult.message.indexOf('duplicate') >= 0) throw new Error('用户名已被占用');
-        }
+        if (pResult.error && pResult.message.indexOf('duplicate') >= 0) throw new Error('用户名已被占用');
 
-        // Mark invitation code as used
         await supabase.rpc('validate_and_use_code', { p_code: inviteCode.toUpperCase(), p_new_owner: userId });
 
         if (result.data.session) {
-          // Generate code for new user
           var cr = await supabase.rpc('generate_invitation_code', { p_user_id: userId });
           if (cr.data) { document.getElementById('myInviteCode').textContent = cr.data; inviteBox.style.display = 'block'; btnEl.style.display = 'none'; setTimeout(function() { window.location.href = 'app.html'; }, 3500); }
           else { window.location.href = 'app.html'; }
         } else {
           msgEl.className = 'msg success';
-          msgEl.textContent = '✅ 注册成功！切换到登录页登录';
-          btnEl.disabled = false;
-          btnEl.textContent = '注 册';
-          setTimeout(function() {
-            document.getElementById('tabLogin').click();
-            accountInput.value = uname;
-          }, 1500);
+          msgEl.textContent = '✅ 注册成功！请切换到登录页登录';
+          btnEl.disabled = false; btnEl.textContent = '注 册';
+          setTimeout(function() { document.getElementById('tabLogin').click(); accountInput.value = uname; }, 1500);
         }
       }
     } catch (err) {
       msgEl.className = 'msg error';
       msgEl.textContent = err.message || '操作失败';
       btnEl.disabled = false;
-      btnEl.textContent = mode === 'login' ? '登 录' : '注 册';
+      if (mode === 'register') {
+        btnEl.textContent = isEmail(accountInput.value.trim()) ? '验证并注册' : '注 册';
+        if (isEmail(accountInput.value.trim())) {
+          sendCodeBtn.style.display = 'block';
+          sendCodeBtn.disabled = false;
+          sendCodeBtn.textContent = '重新发送';
+        }
+      } else {
+        btnEl.textContent = '登 录';
+      }
     }
   });
 })();
