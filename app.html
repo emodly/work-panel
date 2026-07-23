@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人工作计划面板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+<style>
+:root {
+  --primary: #4F46E5;
+  --primary-light: #EEF2FF;
+  --primary-dark: #3730A3;
+  --success: #10B981;
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --danger: #EF4444;
+  --danger-light: #FEF2F2;
+  --info: #3B82F6;
+  --info-light: #EFF6FF;
+  --bg: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --border: #E2E8F0;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --transition: 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.header-left { display: flex; align-items: center; gap: 14px; }
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-nav { display: flex; align-items: center; gap: 6px; margin-left: 16px; }
+
+.date-nav button {
+  width: 30px; height: 30px; border: 1px solid var(--border);
+  background: var(--bg-card); border-radius: var(--radius-sm);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text-secondary); transition: var(--transition);
+}
+
+.date-nav button:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+.date-nav .date-display { font-weight: 600; font-size: 14px; min-width: 130px; text-align: center; }
+
+.date-nav .btn-today { width: auto; padding: 0 10px; font-size: 12px; font-weight: 500; }
+
+.tabs { display: flex; gap: 3px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
+
+.tab-btn {
+  padding: 6px 14px; border: none; background: transparent; border-radius: 7px;
+  cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  transition: var(--transition); white-space: nowrap;
+}
+
+.tab-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: var(--shadow-sm); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.main { max-width: 1400px; margin: 0 auto; padding: 16px 20px; }
+
+.dashboard { display: grid; grid-template-columns: 1fr 360px; grid-template-rows: auto auto; gap: 16px; }
+.dashboard .panel-plan { grid-row: 1 / 3; }
+
+.panel {
+  background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+
+.panel-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+
+.panel-header h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.panel-body { padding: 14px 18px; flex: 1; overflow-y: auto; }
+.panel-plan .panel-body { max-height: calc(100vh - 180px); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px;
+  border: none; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: var(--transition); white-space: nowrap;
+}
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-xs { padding: 2px 7px; font-size: 10px; border-radius: 4px; }
+.btn-icon { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-light); }
+
+.time-slot-group { margin-bottom: 16px; }
+.time-slot-group:last-child { margin-bottom: 0; }
+
+.time-slot-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.time-slot-header .dot { width: 7px; height: 7px; border-radius: 50%; }
+.time-slot-header .dot.morning { background: #F59E0B; }
+.time-slot-header .dot.afternoon { background: #F97316; }
+.time-slot-header .dot.evening { background: #6366F1; }
+
+.task-list { display: flex; flex-direction: column; gap: 5px; }
+
+.task-item {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg-card); cursor: pointer; position: relative;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.task-item:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+
+.task-item.status-pulse { animation: statusPulse 0.5s ease; }
+
+@keyframes statusPulse {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.02); }
+  50% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.task-priority-bar { width: 3px; height: 32px; border-radius: 2px; flex-shrink: 0; }
+.task-priority-bar.high { background: var(--danger); }
+.task-priority-bar.medium { background: var(--warning); }
+.task-priority-bar.low { background: var(--info); }
+
+.task-status-dot {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+  font-size: 10px;
+}
+
+.task-status-dot:active { transform: scale(0.85); }
+
+.task-item.done .task-status-dot { background: var(--success); border-color: var(--success); color: #fff; }
+
+.task-content { flex: 1; min-width: 0; }
+
+.task-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  transition: color 0.3s ease, text-decoration 0.3s ease;
+}
+
+.task-item.done .task-title { text-decoration: line-through; color: var(--text-muted); }
+
+.task-meta { display: flex; gap: 6px; margin-top: 2px; }
+
+.task-tag { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 500; }
+.task-tag.priority-high { background: var(--danger-light); color: var(--danger); }
+.task-tag.priority-medium { background: var(--warning-light); color: #B45309; }
+.task-tag.priority-low { background: var(--info-light); color: var(--info); }
+.task-tag.category { background: var(--primary-light); color: var(--primary); }
+
+.task-actions { display: flex; gap: 3px; opacity: 0; transition: var(--transition); }
+.task-item:hover .task-actions { opacity: 1; }
+.task-item.done { background: #F8FAFC; border-color: #F1F5F9; }
+
+.empty-state { text-align: center; padding: 36px 16px; color: var(--text-muted); }
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; margin-bottom: 3px; }
+
+.progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+
+.stat-card { background: var(--bg); border-radius: var(--radius); padding: 12px; text-align: center; }
+.stat-card .stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-card .stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+.stat-card.primary .stat-value { color: var(--primary); }
+.stat-card.success .stat-value { color: var(--success); }
+.stat-card.warning .stat-value { color: var(--warning); }
+
+.progress-ring-container { display: flex; align-items: center; justify-content: center; padding: 8px 0; }
+.progress-ring { width: 90px; height: 90px; }
+.progress-ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
+.progress-ring-fill {
+  fill: none; stroke: var(--success); stroke-width: 7; stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.5s ease;
+}
+.progress-ring-text { font-size: 22px; font-weight: 700; fill: var(--text); text-anchor: middle; dominant-baseline: middle; }
+
+.slot-progress { display: flex; flex-direction: column; gap: 6px; }
+.slot-progress-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.slot-progress-item .slot-name { width: 28px; color: var(--text-secondary); flex-shrink: 0; }
+.slot-progress-item .progress-bar-wrap { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.slot-progress-item .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.slot-progress-item .slot-count { width: 30px; font-size: 11px; color: var(--text-muted); text-align: right; }
+
+.summary-editor {
+  width: 100%; min-height: 100px; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; font-size: 12px; font-family: inherit; line-height: 1.5; resize: vertical; transition: var(--transition);
+}
+.summary-editor:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.summary-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+
+.week-view, .month-view { display: none; }
+
+.view-animate-in { animation: viewFadeIn 0.25s ease; }
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.view-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.view-nav .nav-title { font-size: 16px; font-weight: 700; min-width: 140px; text-align: center; }
+.view-nav .nav-arrows { display: flex; gap: 5px; }
+.view-nav .nav-arrows button {
+  width: 32px; height: 32px; border: 1px solid var(--border); background: var(--bg-card);
+  border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--text-secondary);
+  transition: var(--transition); display: flex; align-items: center; justify-content: center;
+}
+.view-nav .nav-arrows button:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+.view-nav .btn-today-sm {
+  padding: 5px 12px; font-size: 11px; font-weight: 500; border: 1px solid var(--border);
+  background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer;
+  color: var(--text-secondary); transition: var(--transition);
+}
+.view-nav .btn-today-sm:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+.week-calendar { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
+.week-day-headers { display: grid; grid-template-columns: 55px repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+.week-day-headers .time-gutter { padding: 8px 6px; font-size: 10px; color: var(--text-muted); text-align: center; border-right: 1px solid var(--border); }
+.week-day-header {
+  padding: 8px 4px; text-align: center; cursor: pointer; transition: var(--transition);
+  border-right: 1px solid var(--border); position: relative;
+}
+.week-day-header:last-child { border-right: none; }
+.week-day-header:hover { background: var(--bg); }
+.week-day-header .day-name { font-size: 11px; color: var(--text-secondary); }
+.week-day-header .day-num { font-size: 20px; font-weight: 700; line-height: 1; }
+.week-day-header.today { background: var(--primary-light); }
+.week-day-header.today .day-name { color: var(--primary); font-weight: 600; }
+.week-day-header.today .day-num { color: #fff; background: var(--primary); width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-top: 3px; }
+
+.week-calendar-body { display: grid; grid-template-columns: 55px repeat(7, 1fr); max-height: 550px; overflow-y: auto; position: relative; }
+.time-column { border-right: 1px solid var(--border); }
+.time-slot-label { height: 48px; padding: 0 5px; font-size: 10px; color: var(--text-muted); text-align: right; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 1px; }
+.day-column { border-right: 1px solid var(--border); position: relative; }
+.day-column:last-child { border-right: none; }
+.day-column.today { background: rgba(79,70,229,0.02); }
+.day-column.weekend { background: rgba(248,250,252,0.5); }
+.time-cell { height: 48px; border-bottom: 1px solid #F1F5F9; position: relative; cursor: pointer; transition: var(--transition); }
+.time-cell:hover { background: rgba(79,70,229,0.04); }
+
+.week-task-block {
+  position: absolute; left: 2px; right: 2px; padding: 2px 5px; border-radius: 4px;
+  font-size: 10px; font-weight: 500; cursor: pointer; overflow: hidden; z-index: 2;
+  transition: var(--transition); border-left: 3px solid; white-space: nowrap; text-overflow: ellipsis;
+}
+.week-task-block:hover { transform: scale(1.02); box-shadow: var(--shadow-md); z-index: 5; }
+.week-task-block.priority-high { background: #FEF2F2; border-left-color: var(--danger); color: #991B1B; }
+.week-task-block.priority-medium { background: #FFFBEB; border-left-color: var(--warning); color: #92400E; }
+.week-task-block.priority-low { background: #EFF6FF; border-left-color: var(--info); color: #1E40AF; }
+.week-task-block.done { opacity: 0.5; text-decoration: line-through; }
+
+.time-now-line {
+  position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 3; pointer-events: none;
+}
+.time-now-line::before { content: ''; position: absolute; left: -3px; top: -2.5px; width: 7px; height: 7px; background: var(--danger); border-radius: 50%; }
+
+.month-grid { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; }
+.month-weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+.month-weekday-header { padding: 9px; text-align: center; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.month-weekday-header.weekend { color: var(--danger); }
+.month-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.month-cell {
+  min-height: 80px; padding: 5px 7px; border-right: 1px solid #F1F5F9; border-bottom: 1px solid #F1F5F9;
+  cursor: pointer; transition: var(--transition); position: relative;
+}
+.month-cell:nth-child(7n) { border-right: none; }
+.month-cell:hover { background: rgba(79,70,229,0.03); }
+.month-cell.other-month { background: #F8FAFC; }
+.month-cell.other-month .cell-date { color: var(--text-muted); }
+.month-cell.today { background: var(--primary-light); }
+.month-cell.today .cell-date { color: #fff; background: var(--primary); width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.month-cell .cell-date { font-size: 12px; color: var(--text); margin-bottom: 3px; }
+.month-cell .cell-dots { display: flex; flex-wrap: wrap; gap: 2px; }
+.month-cell .cell-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.month-cell .cell-dot.high { background: var(--danger); }
+.month-cell .cell-dot.medium { background: var(--warning); }
+.month-cell .cell-dot.low { background: var(--info); }
+.month-cell .cell-more { font-size: 9px; color: var(--text-muted); margin-top: 1px; }
+
+.stats-view { display: none; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.stats-grid .panel { min-height: 300px; }
+.chart-container { width: 100%; height: 260px; position: relative; }
+.chart-container canvas { width: 100% !important; height: 100% !important; }
+
+.heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.heatmap-cell { aspect-ratio: 1; border-radius: 3px; position: relative; }
+.heatmap-cell .cell-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 3px 7px; border-radius: 4px; font-size: 10px; white-space: nowrap; pointer-events: none; z-index: 10; }
+.heatmap-cell:hover .cell-tooltip { display: block; }
+.heatmap-month-labels { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 5px; font-size: 10px; color: var(--text-muted); text-align: center; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  width: 440px; max-width: 90vw; max-height: 80vh; overflow-y: auto; animation: modalIn 0.2s ease;
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+.modal-header { padding: 18px 22px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-close { width: 28px; height: 28px; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-sm); font-size: 18px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+.modal-close:hover { background: var(--danger-light); color: var(--danger); }
+.modal-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.form-group input, .form-group select, .form-group textarea { padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; transition: var(--transition); }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-footer { padding: 14px 22px 18px; display: flex; justify-content: flex-end; gap: 8px; }
+
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(120px);
+  background: #1E293B; color: #fff; padding: 11px 24px; border-radius: 22px;
+  font-size: 13px; font-weight: 600; z-index: 300;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none; box-shadow: 0 8px 30px rgba(0,0,0,0.2); white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 1024px) {
+  .dashboard { grid-template-columns: 1fr; }
+  .dashboard .panel-plan { grid-row: auto; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .week-calendar-body { max-height: 380px; }
+  .month-cell { min-height: 64px; }
+}
+
+@media (max-width: 640px) {
+  .header { padding: 0 10px; }
+  .main { padding: 10px; }
+  .date-nav .date-display { min-width: 90px; font-size: 12px; }
+  .tabs { gap: 1px; }
+  .tab-btn { padding: 5px 10px; font-size: 11px; }
+  .progress-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .week-calendar-body { max-height: 280px; overflow-x: auto; }
+  .week-calendar { overflow-x: auto; }
+  .month-cell { min-height: 48px; padding: 3px; }
+  .month-cell .cell-date { font-size: 10px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">📋 工作面板</div>
+    <div class="date-nav">
+      <button onclick="App.prevDay()" title="前一天">◀</button>
+      <button class="btn-today" onclick="App.goToday()">今天</button>
+      <span class="date-display" id="dateDisplay"></span>
+      <button onclick="App.nextDay()" title="后一天">▶</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="App.switchTab('dashboard')">📊 仪表盘</button>
+      <button class="tab-btn" onclick="App.switchTab('week')">📅 周视图</button>
+      <button class="tab-btn" onclick="App.switchTab('month')">📆 月视图</button>
+      <button class="tab-btn" onclick="App.switchTab('stats')">📈 统计</button>
+    </nav>
+    <span style="display:flex;align-items:center;gap:6px;padding-left:10px;border-left:1px solid var(--border);">
+      <span style="font-size:12px;font-weight:600;color:var(--text);" id="headerUserName"></span>
+      <button class="btn btn-outline btn-sm" onclick="AuthManager.logout()" title="退出登录">🚪</button>
+    </span>
+  </div>
+</header>
+
+<main class="main">
+
+  <div class="dashboard" id="viewDashboard">
+    <div class="panel panel-plan">
+      <div class="panel-header">
+        <h2>📝 今日计划</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-outline btn-sm" onclick="App.autoGenerateSummary()">📋 生成总结</button>
+          <button class="btn btn-primary btn-sm" onclick="App.openTaskModal()">+ 添加任务</button>
+        </div>
+      </div>
+      <div class="panel-body" id="planContent"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h2>📊 完成进度</h2></div>
+      <div class="panel-body" id="progressContent"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>✍️ 工作总结</h2>
+        <button class="btn btn-outline btn-sm" onclick="App.saveSummary()">💾 保存</button>
+      </div>
+      <div class="panel-body" id="summaryContent"></div>
+    </div>
+  </div>
+
+  <div class="week-view" id="viewWeek">
+    <div class="view-nav">
+      <button class="btn-today-sm" onclick="App._todayWeek()">今天</button>
+      <div class="nav-arrows">
+        <button onclick="App._navigateWeek(-1)" title="上一周">◀</button>
+        <span class="nav-title" id="weekTitle"></span>
+        <button onclick="App._navigateWeek(1)" title="下一周">▶</button>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="week-calendar" id="weekCalendar"></div>
+  </div>
+
+  <div class="month-view" id="viewMonth">
+    <div class="view-nav">
+      <button class="btn-today-sm" onclick="App._todayMonth()">今天</button>
+      <div class="nav-arrows">
+        <button onclick="App._navigateMonth(-1)" title="上个月">◀</button>
+        <span class="nav-title" id="monthTitle"></span>
+        <button onclick="App._navigateMonth(1)" title="下个月">▶</button>
+      </div>
+      <div style="width:40px;"></div>
+    </div>
+    <div class="month-grid" id="monthGrid"></div>
+  </div>
+
+  <div class="stats-view" id="viewStats">
+    <div class="stats-grid">
+      <div class="panel">
+        <div class="panel-header"><h2>📈 本周完成趋势</h2></div>
+        <div class="panel-body"><div class="chart-container"><canvas id="chartTrend"></canvas></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>🍩 任务分类分布</h2></div>
+        <div class="panel-body"><div class="chart-container"><canvas id="chartCategory"></canvas></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>🗓️ 本月热力图</h2>
+        <span style="font-size:11px;color:var(--text-muted);">颜色越深任务完成越多</span>
+      </div>
+      <div class="panel-body">
+        <div class="heatmap-month-labels" id="heatmapLabels"></div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;color:var(--text-muted);justify-content:flex-end;">
+          少
+          <span style="width:12px;height:12px;background:#E2E8F0;border-radius:2px;"></span>
+          <span style="width:12px;height:12px;background:#A5B4FC;border-radius:2px;"></span>
+          <span style="width:12px;height:12px;background:#6366F1;border-radius:2px;"></span>
+          <span style="width:12px;height:12px;background:#3730A3;border-radius:2px;"></span>
+          多
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="modal-overlay" id="taskModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">添加任务</h3>
+      <button class="modal-close" onclick="App.closeTaskModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>任务标题 *</label>
+        <input type="text" id="inputTitle" placeholder="输入任务标题..." maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>任务描述</label>
+        <textarea id="inputDesc" rows="2" placeholder="可选的任务描述..." maxlength="200"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>时间段</label>
+          <select id="inputTimeSlot">
+            <option value="morning">🌅 上午</option>
+            <option value="afternoon">☀️ 下午</option>
+            <option value="evening">🌙 晚上</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>优先级</label>
+          <select id="inputPriority">
+            <option value="high">🔴 高</option>
+            <option value="medium" selected>🟡 中</option>
+            <option value="low">🔵 低</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>分类</label>
+        <select id="inputCategory">
+          <option value="开发">💻 开发</option>
+          <option value="会议">🤝 会议</option>
+          <option value="学习">📚 学习</option>
+          <option value="文档">📄 文档</option>
+          <option value="沟通">💬 沟通</option>
+          <option value="其他">📌 其他</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="App.closeTaskModal()">取消</button>
+      <button class="btn btn-primary" id="btnSaveTask" onclick="App.saveTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== Supabase Client =====================
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) { console.error('Supabase init failed:', e); }
+
+// ===================== Auth Manager =====================
+const AuthManager = {
+  async getSession() {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session;
+  },
+  async getUser() {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getUser();
+    return data.user;
+  },
+  async logout() {
+    if (supabase) await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  }
+};
+
+// ===================== Data Manager (Supabase) =====================
+const DataManager = {
+  _uid() { return 'tsk_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); },
+
+  async getTasks(date) {
+    if (!supabase) return [];
+    const { data, error } = await supabase.from('tasks').select('*').eq('date', date).order('order');
+    return error ? [] : (data || []);
+  },
+  async getTasksInRange(dates) {
+    if (!supabase || dates.length === 0) return [];
+    const { data, error } = await supabase.from('tasks').select('*').in('date', dates).order('order');
+    return error ? [] : (data || []);
+  },
+  async getTasksInMonth(year, month) {
+    if (!supabase) return [];
+    const prefix = year + '-' + String(month).padStart(2, '0') + '-';
+    const { data, error } = await supabase.from('tasks').select('*').like('date', prefix + '%').order('date').order('order');
+    return error ? [] : (data || []);
+  },
+  async addTask(task) {
+    if (!supabase) return;
+    if (!task.id) task.id = this._uid();
+    const { error } = await supabase.from('tasks').insert(task);
+    if (error) console.error('addTask:', error);
+  },
+  async updateTask(taskId, updates) {
+    if (!supabase) return;
+    const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+    if (error) console.error('updateTask:', error);
+  },
+  async deleteTask(taskId) {
+    if (!supabase) return;
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+    if (error) console.error('deleteTask:', error);
+  },
+  async getSummary(date) {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from('summaries').select('*').eq('date', date).maybeSingle();
+    if (error && error.code !== 'PGRST116') console.error('getSummary:', error);
+    return data || null;
+  },
+  async saveSummary(date, content) {
+    if (!supabase) return;
+    const { error } = await supabase.from('summaries').upsert({ date, content }, { onConflict: 'user_id,date' });
+    if (error) console.error('saveSummary:', error);
+  },
+  async _findTask(taskId) {
+    if (!supabase) return null;
+    const { data } = await supabase.from('tasks').select('*').eq('id', taskId).maybeSingle();
+    return data;
+  }
+};
+
+// ===================== App Controller =====================
+const App = {
+  state: { currentDate: '', currentTab: 'dashboard', editingTaskId: null },
+  charts: {},
+
+  async init() {
+    const session = await AuthManager.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+    const user = await AuthManager.getUser();
+    const displayName = (user && user.user_metadata && user.user_metadata.display_name) || (user && user.email) || '用户';
+    document.getElementById('headerUserName').textContent = displayName;
+    this.state.currentDate = this._todayStr();
+    await this.render();
+    this._bindGlobalEvents();
+  },
+
+  _todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  },
+  _offsetDate(dateStr, days) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  },
+  _formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + wd[d.getDay()];
+  },
+  _formatShort(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  },
+  _getWeekRange(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d); monday.setDate(d.getDate() + diff);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const cd = new Date(monday); cd.setDate(monday.getDate() + i);
+      dates.push(cd.getFullYear() + '-' + String(cd.getMonth() + 1).padStart(2, '0') + '-' + String(cd.getDate()).padStart(2, '0'));
+    }
+    return { dates, monday: dates[0], sunday: dates[6] };
+  },
+
+  async prevDay() { this.state.currentDate = this._offsetDate(this.state.currentDate, -1); await this.render(); },
+  async nextDay() { this.state.currentDate = this._offsetDate(this.state.currentDate, 1); await this.render(); },
+  async goToday() { this.state.currentDate = this._todayStr(); await this.render(); },
+  async goDate(d) { this.state.currentDate = d; await this.render(); },
+
+  async switchTab(tab) {
+    this.state.currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const tgt = document.querySelector('.tab-btn[onclick*="' + tab + '"]');
+    if (tgt) tgt.classList.add('active');
+    ['viewDashboard', 'viewWeek', 'viewMonth', 'viewStats'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; el.classList.remove('view-animate-in'); }
+    });
+    const vm = { dashboard: 'viewDashboard', week: 'viewWeek', month: 'viewMonth', stats: 'viewStats' };
+    const el = document.getElementById(vm[tab]);
+    if (el) { el.style.display = (tab === 'dashboard') ? 'grid' : 'block'; el.classList.add('view-animate-in'); setTimeout(function() { el.classList.remove('view-animate-in'); }, 260); }
+    await this.render();
+  },
+
+  async render() {
+    document.getElementById('dateDisplay').textContent = this._formatDate(this.state.currentDate);
+    if (this.state.currentTab === 'dashboard') await this._renderDashboard();
+    else if (this.state.currentTab === 'week') await this._renderWeek();
+    else if (this.state.currentTab === 'month') await this._renderMonth();
+    else if (this.state.currentTab === 'stats') await this._renderStats();
+  },
+
+  async _renderDashboard() { await this._renderPlan(); await this._renderProgress(); await this._renderSummary(); },
+
+  async _renderPlan() {
+    const tasks = await DataManager.getTasks(this.state.currentDate);
+    const c = document.getElementById('planContent');
+    if (tasks.length === 0) {
+      c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>今天还没有计划</p><p style="font-size:12px;">点击右上角"添加任务"开始规划一天</p></div>';
+      return;
+    }
+    const slots = [{ k: 'morning', l: '上午', i: '🌅', dc: 'morning' }, { k: 'afternoon', l: '下午', i: '☀️', dc: 'afternoon' }, { k: 'evening', l: '晚上', i: '🌙', dc: 'evening' }];
+    let h = '';
+    slots.forEach(function(s) {
+      const st = tasks.filter(function(t) { return t.timeSlot === s.k; });
+      h += '<div class="time-slot-group"><div class="time-slot-header"><span class="dot ' + s.dc + '"></span> ' + s.i + ' ' + s.l + ' <span style="color:var(--text-muted);font-weight:400;">(' + st.length + '项)</span></div><div class="task-list">';
+      if (st.length === 0) {
+        h += '<div style="padding:6px 0;font-size:12px;color:var(--text-muted);">暂无安排</div>';
+      } else {
+        st.forEach(function(task) {
+          var dc = task.status === 'done' ? ' done' : '';
+          var si = task.status === 'done' ? '✓' : (task.status === 'in_progress' ? '▶' : '');
+          var pl = { high: '高优先', medium: '中优先', low: '低优先' };
+          h += '<div class="task-item' + dc + '" data-id="' + task.id + '"><div class="task-priority-bar ' + task.priority + '"></div><div class="task-status-dot" onclick="event.stopPropagation();App.cycleStatus(\'' + task.id + '\')" title="点击切换状态">' + si + '</div><div class="task-content" onclick="App.openTaskModal(\'' + task.id + '\')"><div class="task-title">' + App._esc(task.title) + '</div><div class="task-meta"><span class="task-tag priority-' + task.priority + '">' + (pl[task.priority] || task.priority) + '</span><span class="task-tag category">' + task.category + '</span></div></div><div class="task-actions"><button class="btn btn-icon btn-xs" onclick="event.stopPropagation();App.openTaskModal(\'' + task.id + '\')" title="编辑">✏️</button><button class="btn btn-icon btn-xs btn-danger" onclick="event.stopPropagation();App.deleteTask(\'' + task.id + '\')" title="删除">🗑️</button></div></div>';
+        });
+      }
+      h += '</div></div>';
+    });
+    c.innerHTML = h;
+  },
+
+  async _renderProgress() {
+    const tasks = await DataManager.getTasks(this.state.currentDate);
+    const total = tasks.length;
+    const done = tasks.filter(function(t) { return t.status === 'done'; }).length;
+    const inProg = tasks.filter(function(t) { return t.status === 'in_progress'; }).length;
+    const pending = tasks.filter(function(t) { return t.status === 'pending'; }).length;
+    const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+    const circ = 2 * Math.PI * 36;
+    const off = circ - (rate / 100) * circ;
+    const slots = ['morning', 'afternoon', 'evening'];
+    const sl = { morning: '上午', afternoon: '下午', evening: '晚上' };
+    document.getElementById('progressContent').innerHTML =
+      '<div class="progress-grid">' +
+      '<div class="stat-card primary"><div class="stat-value">' + total + '</div><div class="stat-label">总任务</div></div>' +
+      '<div class="stat-card success"><div class="stat-value">' + done + '</div><div class="stat-label">已完成</div></div>' +
+      '<div class="stat-card warning"><div class="stat-value">' + inProg + '</div><div class="stat-label">进行中</div></div>' +
+      '<div class="stat-card"><div class="stat-value" style="color:var(--text-muted);">' + pending + '</div><div class="stat-label">待开始</div></div></div>' +
+      '<div class="progress-ring-container"><svg class="progress-ring" viewBox="0 0 100 100"><circle class="progress-ring-bg" cx="50" cy="50" r="36"/><circle class="progress-ring-fill" cx="50" cy="50" r="36" stroke-dasharray="' + circ + '" stroke-dashoffset="' + off + '"/><text class="progress-ring-text" x="50" y="50">' + rate + '%</text></svg></div>' +
+      '<div class="slot-progress">' + slots.map(function(s) {
+        var sTasks = tasks.filter(function(t) { return t.timeSlot === s; });
+        var sDone = sTasks.filter(function(t) { return t.status === 'done'; }).length;
+        var sPct = sTasks.length > 0 ? Math.round((sDone / sTasks.length) * 100) : 0;
+        return '<div class="slot-progress-item"><span class="slot-name">' + sl[s] + '</span><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + sPct + '%;background:' + (sPct === 100 ? 'var(--success)' : 'var(--primary)') + ';"></div></div><span class="slot-count">' + sDone + '/' + sTasks.length + '</span></div>';
+      }).join('') + '</div>';
+  },
+
+  async _renderSummary() {
+    const summary = await DataManager.getSummary(this.state.currentDate);
+    const content = summary ? summary.content : '';
+    const updatedAt = summary ? new Date(summary.updated_at || summary.updatedAt).toLocaleString('zh-CN') : '';
+    document.getElementById('summaryContent').innerHTML =
+      '<textarea class="summary-editor" id="summaryEditor" placeholder="记录今天的工作总结、收获、遇到的问题和明日计划...">' + App._esc(content) + '</textarea>' +
+      '<div class="summary-meta"><span>' + (updatedAt ? '上次保存: ' + updatedAt : '今天还没有写总结') + '</span><button class="btn btn-outline btn-sm" onclick="App.clearSummary()">清空</button></div>';
+  },
+
+  async saveSummary() {
+    const editor = document.getElementById('summaryEditor');
+    if (!editor) return;
+    await DataManager.saveSummary(this.state.currentDate, editor.value);
+    this._toast('✅ 工作总结已保存');
+    await this._renderSummary();
+  },
+  async clearSummary() {
+    if (!confirm('确定要清空今天的工作总结吗？')) return;
+    await DataManager.saveSummary(this.state.currentDate, '');
+    await this._renderSummary();
+    this._toast('已清空工作总结');
+  },
+  async autoGenerateSummary() {
+    const tasks = await DataManager.getTasks(this.state.currentDate);
+    if (tasks.length === 0) { this._toast('今天还没有任务，请先添加任务'); return; }
+    const doneTasks = tasks.filter(function(t) { return t.status === 'done'; });
+    const inProgTasks = tasks.filter(function(t) { return t.status === 'in_progress'; });
+    const pendTasks = tasks.filter(function(t) { return t.status === 'pending'; });
+    var lines = [];
+    if (doneTasks.length > 0) { lines.push('✅ 已完成任务：'); doneTasks.forEach(function(t, i) { lines.push('  ' + (i + 1) + '. ' + t.title); }); }
+    if (inProgTasks.length > 0) { lines.push('\n🔄 进行中任务：'); inProgTasks.forEach(function(t, i) { lines.push('  ' + (i + 1) + '. ' + t.title); }); }
+    if (pendTasks.length > 0) { lines.push('\n📋 待完成任务：'); pendTasks.forEach(function(t, i) { lines.push('  ' + (i + 1) + '. ' + t.title); }); }
+    lines.push('\n💡 今日收获：'); lines.push('\n⚠️ 遇到的问题：'); lines.push('\n📌 明日计划：');
+    const editor = document.getElementById('summaryEditor');
+    if (editor) { editor.value = editor.value.trim() ? editor.value + '\n\n---\n\n' + lines.join('\n') : lines.join('\n'); }
+    this._toast('✅ 已生成总结模板');
+  },
+
+  async openTaskModal(taskId) {
+    this.state.editingTaskId = taskId || null;
+    document.getElementById('modalTitle').textContent = taskId ? '编辑任务' : '添加任务';
+    document.getElementById('btnSaveTask').textContent = taskId ? '更新' : '添加';
+    if (taskId) {
+      const task = await DataManager._findTask(taskId);
+      if (task) {
+        document.getElementById('inputTitle').value = task.title || '';
+        document.getElementById('inputDesc').value = task.description || '';
+        document.getElementById('inputTimeSlot').value = task.time_slot || 'morning';
+        document.getElementById('inputPriority').value = task.priority || 'medium';
+        document.getElementById('inputCategory').value = task.category || '开发';
+      }
+    } else {
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputDesc').value = '';
+      document.getElementById('inputTimeSlot').value = 'morning';
+      document.getElementById('inputPriority').value = 'medium';
+      document.getElementById('inputCategory').value = '开发';
+    }
+    document.getElementById('taskModalOverlay').classList.add('active');
+    setTimeout(function() { document.getElementById('inputTitle').focus(); }, 100);
+  },
+  closeTaskModal() { document.getElementById('taskModalOverlay').classList.remove('active'); this.state.editingTaskId = null; },
+
+  async saveTask() {
+    const title = document.getElementById('inputTitle').value.trim();
+    if (!title) { this._toast('⚠️ 请输入任务标题'); return; }
+    const data = {
+      title: title,
+      description: document.getElementById('inputDesc').value.trim(),
+      time_slot: document.getElementById('inputTimeSlot').value,
+      priority: document.getElementById('inputPriority').value,
+      category: document.getElementById('inputCategory').value,
+    };
+    if (this.state.editingTaskId) {
+      await DataManager.updateTask(this.state.editingTaskId, data);
+      this._toast('✅ 任务已更新');
+    } else {
+      data.date = this.state.currentDate;
+      data.status = 'pending';
+      data.order = (await DataManager.getTasks(this.state.currentDate)).length;
+      await DataManager.addTask(data);
+      this._toast('✅ 任务已添加');
+    }
+    this.closeTaskModal();
+    await this.render();
+  },
+
+  async deleteTask(taskId) {
+    if (!confirm('确定要删除这个任务吗？')) return;
+    await DataManager.deleteTask(taskId);
+    this._toast('🗑️ 任务已删除');
+    await this.render();
+  },
+
+  async cycleStatus(taskId) {
+    const task = await DataManager._findTask(taskId);
+    if (!task) return;
+    const next = { pending: 'in_progress', in_progress: 'done', done: 'pending' };
+    const newStatus = next[task.status];
+    await DataManager.updateTask(taskId, { status: newStatus });
+    const taskEl = document.querySelector('.task-item[data-id="' + taskId + '"]');
+    if (taskEl) {
+      const dotEl = taskEl.querySelector('.task-status-dot');
+      if (newStatus === 'done') { taskEl.classList.add('done'); if (dotEl) dotEl.textContent = '✓'; }
+      else if (newStatus === 'in_progress') { taskEl.classList.remove('done'); if (dotEl) dotEl.textContent = '▶'; }
+      else { taskEl.classList.remove('done'); if (dotEl) dotEl.textContent = ''; }
+      taskEl.classList.remove('status-pulse'); void taskEl.offsetWidth; taskEl.classList.add('status-pulse');
+      await this._renderProgress();
+    } else { await this.render(); }
+    const labels = { pending: '待开始', in_progress: '进行中', done: '已完成' };
+    const icons = { pending: '🔄', in_progress: '▶️', done: '✅' };
+    this._toast(icons[newStatus] + ' ' + (task.title || '').substring(0, 18) + ' → ' + labels[newStatus]);
+  },
+
+  async _todayWeek() { this.state.currentDate = this._todayStr(); await this.render(); },
+  async _navigateWeek(dir) { this.state.currentDate = this._offsetDate(this.state.currentDate, dir * 7); await this.render(); },
+
+  async _renderWeek() {
+    const today = this._todayStr();
+    const r = this._getWeekRange(this.state.currentDate);
+    document.getElementById('weekTitle').textContent = this._formatShort(r.monday) + ' - ' + this._formatShort(r.sunday);
+    const allTasks = await DataManager.getTasksInRange(r.dates);
+    const dn = ['一', '二', '三', '四', '五', '六', '日'];
+    const dm = r.dates.map(function(d) { var p = d.split('-'); return parseInt(p[1]) + '/' + parseInt(p[2]); });
+    const timeSlots = []; for (var h = 7; h <= 21; h++) timeSlots.push(String(h).padStart(2, '0') + ':00');
+
+    var hh = '<div class="time-gutter"></div>';
+    r.dates.forEach(function(d, i) {
+      var it = d === today, iw = i >= 5;
+      hh += '<div class="week-day-header' + (it ? ' today' : '') + (iw ? ' weekend' : '') + '" onclick="App.goDate(\'' + d + '\');App.switchTab(\'dashboard\');"><div class="day-name">周' + dn[i] + '</div><div class="day-num">' + dm[i].split('/')[1] + '</div><div style="font-size:9px;color:var(--text-muted);">' + dm[i].split('/')[0] + '月</div></div>';
+    });
+
+    var dayBlocks = r.dates.map(function(d) {
+      var dt = allTasks.filter(function(t) { return t.date === d; });
+      var placed = [], used = {};
+      dt.forEach(function(task) {
+        var row = task.time_slot === 'morning' ? 2 : (task.time_slot === 'afternoon' ? 7 : 12);
+        var span = 2;
+        var ar = row; while (used[ar]) ar += 0.5; used[ar] = true;
+        placed.push({ task: task, top: ar * 48, height: Math.max(22, span * 48 - 4), pc: task.priority, dc: task.status === 'done' ? ' done' : '' });
+      });
+      return placed;
+    });
+
+    var bh = '<div class="time-column">';
+    timeSlots.forEach(function(t) { bh += '<div class="time-slot-label">' + t + '</div>'; });
+    bh += '</div>';
+
+    r.dates.forEach(function(d, ci) {
+      var it = d === today, iw = ci >= 5;
+      bh += '<div class="day-column' + (it ? ' today' : '') + (iw ? ' weekend' : '') + '">';
+      timeSlots.forEach(function(t) {
+        bh += '<div class="time-cell" onclick="App.goDate(\'' + d + '\');App.openTaskModal()" title="点击添加任务"></div>';
+      });
+      dayBlocks[ci].forEach(function(b) {
+        bh += '<div class="week-task-block priority-' + b.pc + b.dc + '" style="top:' + b.top + 'px;height:' + b.height + 'px;" onclick="event.stopPropagation();App.goDate(\'' + b.task.date + '\');App.switchTab(\'dashboard\');App.openTaskModal(\'' + b.task.id + '\');" title="' + App._esc(b.task.title) + '">' + App._esc(b.task.title) + '</div>';
+      });
+      bh += '</div>';
+    });
+
+    var now = new Date();
+    var nh = now.getHours() + now.getMinutes() / 60;
+    var ndi = r.dates.indexOf(today);
+    if (ndi >= 0 && nh >= 7 && nh <= 21) bh += '<div class="time-now-line" style="top:' + ((nh - 7) * 48) + 'px;left:55px;right:0;"></div>';
+
+    document.getElementById('weekCalendar').innerHTML = '<div class="week-day-headers">' + hh + '</div><div class="week-calendar-body">' + bh + '</div>';
+  },
+
+  async _todayMonth() { this.state.currentDate = this._todayStr(); await this._renderMonth(); },
+  async _navigateMonth(dir) {
+    var d = new Date(this.state.currentDate + 'T00:00:00');
+    d.setMonth(d.getMonth() + dir);
+    this.state.currentDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    await this._renderMonth();
+  },
+
+  async _renderMonth() {
+    var d = new Date(this.state.currentDate + 'T00:00:00');
+    var ny = d.getFullYear(), nm = d.getMonth() + 1;
+    var dim = new Date(ny, nm, 0).getDate();
+    var fd = new Date(ny, nm - 1, 1).getDay();
+    var today = this._todayStr();
+    document.getElementById('monthTitle').textContent = ny + '年 ' + nm + '月';
+
+    var pm = nm === 1 ? 12 : nm - 1, py = nm === 1 ? ny - 1 : ny;
+    var dipm = new Date(py, pm, 0).getDate();
+    var mp = ny + '-' + String(nm).padStart(2, '0') + '-';
+    var pp = py + '-' + String(pm).padStart(2, '0') + '-';
+    var nxm = nm === 12 ? 1 : nm + 1, nxy = nm === 12 ? ny + 1 : ny;
+    var nxp = nxy + '-' + String(nxm).padStart(2, '0') + '-';
+    var so = fd === 0 ? 6 : fd - 1;
+
+    var monthTasks = await DataManager.getTasksInMonth(ny, nm);
+    var cells = [];
+    for (var i = 0; i < so; i++) {
+      var day = dipm - so + i + 1;
+      cells.push({ date: pp + String(day).padStart(2, '0'), day: day, om: true, tasks: await DataManager.getTasks(pp + String(day).padStart(2, '0')) });
+    }
+    for (var day = 1; day <= dim; day++) {
+      var ds = mp + String(day).padStart(2, '0');
+      cells.push({ date: ds, day: day, om: false, tasks: monthTasks.filter(function(t) { return t.date === ds; }) });
+    }
+    var rem = 42 - cells.length;
+    for (var day = 1; day <= rem; day++) {
+      var ds = nxp + String(day).padStart(2, '0');
+      cells.push({ date: ds, day: day, om: true, tasks: await DataManager.getTasks(ds) });
+    }
+
+    var wdh = ['一', '二', '三', '四', '五', '六', '日'];
+    var pc = { high: 'high', medium: 'medium', low: 'low' };
+    document.getElementById('monthGrid').innerHTML =
+      '<div class="month-weekday-headers">' + wdh.map(function(name, i) { return '<div class="month-weekday-header' + (i >= 5 ? ' weekend' : '') + '">' + name + '</div>'; }).join('') + '</div>' +
+      '<div class="month-days-grid">' + cells.map(function(c) {
+        var it = c.date === today;
+        var cc = [c.om ? 'other-month' : '', it ? 'today' : ''].filter(Boolean).join(' ');
+        var dots = c.tasks.slice(0, 5).map(function(t) { return '<span class="cell-dot ' + (pc[t.priority] || 'medium') + '"></span>'; }).join('');
+        var more = c.tasks.length > 5 ? '<div class="cell-more">+' + (c.tasks.length - 5) + '</div>' : '';
+        return '<div class="month-cell ' + cc + '" onclick="App.goDate(\'' + c.date + '\');App.switchTab(\'dashboard\');"><div class="cell-date">' + c.day + '</div><div class="cell-dots">' + dots + '</div>' + more + '</div>';
+      }).join('') + '</div>';
+  },
+
+  async _renderStats() {
+    await this._renderTrendChart();
+    await this._renderCategoryChart();
+    await this._renderHeatmap();
+  },
+
+  async _renderTrendChart() {
+    var r = this._getWeekRange(this.state.currentDate);
+    var allTasks = await DataManager.getTasksInRange(r.dates);
+    var wdl = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    var totals = r.dates.map(function(d) { return allTasks.filter(function(t) { return t.date === d; }).length; });
+    var dones = r.dates.map(function(d) { return allTasks.filter(function(t) { return t.date === d && t.status === 'done'; }).length; });
+    var ctx = document.getElementById('chartTrend').getContext('2d');
+    if (this.charts.trend) this.charts.trend.destroy();
+    this.charts.trend = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: wdl,
+        datasets: [
+          { label: '总任务', data: totals, borderColor: '#4F46E5', backgroundColor: 'rgba(79,70,229,0.08)', fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#4F46E5' },
+          { label: '已完成', data: dones, borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#10B981' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#F1F5F9' } }, x: { ticks: { font: { size: 10 } }, grid: { display: false } } }
+      }
+    });
+  },
+
+  async _renderCategoryChart() {
+    var r = this._getWeekRange(this.state.currentDate);
+    var allTasks = await DataManager.getTasksInRange(r.dates);
+    var cats = {};
+    allTasks.forEach(function(t) { cats[t.category] = (cats[t.category] || 0) + 1; });
+    var labels = Object.keys(cats);
+    var data = Object.values(cats);
+    var colors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6'];
+    var ctx = document.getElementById('chartCategory').getContext('2d');
+    if (this.charts.category) this.charts.category.destroy();
+    this.charts.category = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: labels, datasets: [{ data: data.length ? data : [1], backgroundColor: data.length ? colors.slice(0, data.length) : ['#E2E8F0'], borderWidth: 2, borderColor: '#fff' }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 11 } } } } }
+    });
+  },
+
+  async _renderHeatmap() {
+    var now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
+    var dim = new Date(y, m, 0).getDate(), fd = new Date(y, m - 1, 1).getDay();
+    var tasks = await DataManager.getTasksInMonth(y, m);
+    var dl = ['一', '二', '三', '四', '五', '六', '日'];
+    document.getElementById('heatmapLabels').innerHTML = dl.map(function(d) { return '<span>' + d + '</span>'; }).join('');
+    var cm = {};
+    tasks.forEach(function(t) { cm[t.date] = (cm[t.date] || 0) + 1; });
+    var max = Math.max(1, 0);
+    Object.keys(cm).forEach(function(k) { max = Math.max(max, cm[k]); });
+    var so = fd === 0 ? 6 : fd - 1;
+    var cells = [];
+    for (var i = 0; i < so; i++) cells.push({ d: null, c: 0 });
+    for (var day = 1; day <= dim; day++) {
+      var ds = y + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      cells.push({ d: day, c: cm[ds] || 0, date: ds });
+    }
+    document.getElementById('heatmapGrid').innerHTML = cells.map(function(c) {
+      if (c.d === null) return '<div></div>';
+      var color = c.c === 0 ? '#E2E8F0' : (c.c / max <= 0.33 ? '#A5B4FC' : (c.c / max <= 0.66 ? '#6366F1' : '#3730A3'));
+      return '<div class="heatmap-cell" style="background:' + color + ';" title="' + c.date + ': ' + c.c + '个任务"><div class="cell-tooltip">' + c.date + '<br>' + c.c + ' 个任务</div></div>';
+    }).join('');
+  },
+
+  _esc: function(str) { if (!str) return ''; var d = document.createElement('div'); d.textContent = str; return d.innerHTML; },
+  _toast: function(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(function() { t.classList.remove('show'); }, 2000);
+  },
+
+  _bindGlobalEvents: function() {
+    var self = this;
+    document.getElementById('taskModalOverlay').addEventListener('click', function(e) { if (e.target === e.currentTarget) self.closeTaskModal(); });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') self.closeTaskModal();
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); self.saveSummary(); }
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'ArrowLeft') self.prevDay();
+      if (e.key === 'ArrowRight') self.nextDay();
+      if (e.key === 't' && !e.ctrlKey && !e.metaKey) self.goToday();
+    });
+  }
+};
+
+document.addEventListener('DOMContentLoaded', function() { App.init(); });
+</script>
+
+</body>
+</html>

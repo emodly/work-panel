@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - 工作面板</title>
+<style>
+:root {
+  --primary: #4F46E5;
+  --primary-dark: #3730A3;
+  --bg: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --border: #E2E8F0;
+  --danger: #EF4444;
+  --success: #10B981;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --transition: 0.2s ease;
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-container {
+  width: 400px;
+  max-width: 92vw;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.login-header .logo { font-size: 36px; margin-bottom: 8px; }
+
+.login-header h1 { font-size: 24px; font-weight: 700; color: var(--text); }
+
+.login-header p { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+.card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 32px 28px;
+}
+
+.tabs {
+  display: flex; gap: 0; margin-bottom: 24px;
+  background: var(--bg); border-radius: var(--radius); padding: 3px;
+}
+
+.tab-btn {
+  flex: 1; padding: 10px; border: none; background: transparent;
+  border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+  color: var(--text-secondary); transition: var(--transition);
+}
+
+.tab-btn.active {
+  background: var(--bg-card); color: var(--primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.form-group { margin-bottom: 16px; }
+
+.form-group label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; transition: var(--transition);
+}
+
+.form-group input:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm);
+  font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition);
+}
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#registerFields { display: none; }
+
+.error-msg { font-size: 13px; color: var(--danger); text-align: center; min-height: 20px; margin-top: 12px; }
+.success-msg { font-size: 13px; color: var(--success); text-align: center; min-height: 20px; margin-top: 12px; }
+
+.footer-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 20px; }
+.footer-note span { color: var(--text-secondary); }
+
+.config-error {
+  background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px; font-size: 13px; color: #991B1B; line-height: 1.6;
+}
+.config-error code { background: #FEE2E2; padding: 1px 6px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-header">
+    <div class="logo">📋</div>
+    <h1>工作面板</h1>
+    <p>多设备同步 · 数据私有 · 云端存储</p>
+  </div>
+
+  <div class="config-error" id="configError" style="display:none;"></div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('login')">登 录</button>
+      <button class="tab-btn" onclick="switchTab('register')">注 册</button>
+    </div>
+
+    <form onsubmit="handleSubmit(event)">
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="email" placeholder="请输入邮箱地址" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="password" placeholder="请输入密码（至少6位）" minlength="6" maxlength="64" autocomplete="current-password" required>
+      </div>
+
+      <div id="registerFields">
+        <div class="form-group">
+          <label>显示名称</label>
+          <input type="text" id="displayName" placeholder="如何称呼你？（可选）" maxlength="20">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">登 录</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+  </div>
+
+  <div class="footer-note">
+    <span>☁️ 数据存储在 Supabase 云端，登录后任何设备都可访问</span>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ===================== Supabase Init =====================
+(function checkConfig() {
+  if (SUPABASE_URL.includes('YOUR_PROJECT_ID') || SUPABASE_ANON_KEY.includes('YOUR_ANON_KEY')) {
+    const el = document.getElementById('configError');
+    el.style.display = 'block';
+    el.innerHTML = `
+      ⚠️ <b>请先配置 Supabase：</b><br><br>
+      1. 前往 <a href="https://app.supabase.com" target="_blank" style="color:#991B1B;">app.supabase.com</a> 注册并创建项目<br>
+      2. 进入 <b>Project Settings → API</b><br>
+      3. 复制 <code>Project URL</code> 和 <code>anon public key</code><br>
+      4. 粘贴到 <code>supabase-config.js</code> 文件中<br>
+      5. 在 Supabase SQL Editor 中执行 <code>supabase-setup.sql</code><br>
+      6. 刷新此页面
+    `;
+    document.getElementById('submitBtn').disabled = true;
+  }
+})();
+
+let supabase;
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) {
+  document.getElementById('configError').style.display = 'block';
+  document.getElementById('configError').textContent = 'Supabase 初始化失败: ' + e.message;
+  document.getElementById('submitBtn').disabled = true;
+}
+
+// ===================== UI =====================
+let currentMode = 'login';
+
+function switchTab(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${mode}')"]`).classList.add('active');
+  document.getElementById('registerFields').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('submitBtn').textContent = mode === 'login' ? '登 录' : '注 册';
+  document.getElementById('errorMsg').textContent = '';
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const displayName = document.getElementById('displayName').value.trim();
+  const btn = document.getElementById('submitBtn');
+  const errEl = document.getElementById('errorMsg');
+
+  errEl.textContent = '';
+
+  if (!email || !password) { errEl.textContent = '请输入邮箱和密码'; return; }
+  if (password.length < 6) { errEl.textContent = '密码至少 6 位'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+
+  try {
+    if (currentMode === 'login') {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // Store display name in user metadata for the app
+      window.location.href = 'app.html';
+    } else {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName || email.split('@')[0] }
+        }
+      });
+      if (error) throw error;
+
+      if (data.user && data.session) {
+        // Auto-confirmed (if email verification is off)
+        window.location.href = 'app.html';
+      } else {
+        errEl.style.color = 'var(--success)';
+        errEl.textContent = '✅ 注册成功！请查看邮箱确认链接（或关闭邮箱验证后重试）';
+        btn.disabled = false;
+        btn.textContent = '注 册';
+      }
+    }
+  } catch (err) {
+    errEl.style.color = 'var(--danger)';
+    errEl.textContent = err.message || '操作失败，请重试';
+    btn.disabled = false;
+    btn.textContent = currentMode === 'login' ? '登 录' : '注 册';
+  }
+}
+</script>
+</body>
+</html>

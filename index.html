@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>工作面板</title>
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#F1F5F9;">
+<div style="text-align:center;color:#64748B;">📋 加载中...</div>
+<script>
+(async function() {
+  if (SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+    document.body.innerHTML = '<div style="text-align:center;padding:40px;font-size:14px;color:#991B1B;line-height:1.8;">⚠️ <b>请先配置 Supabase</b><br><br>编辑 <code>supabase-config.js</code><br>填入你的 Supabase 项目 URL 和 anon key<br><br><small>详见 README.md</small></div>';
+    return;
+  }
+  try {
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var resp = await sb.auth.getSession();
+    if (resp.data && resp.data.session) {
+      window.location.replace('app.html');
+    } else {
+      window.location.replace('login.html');
+    }
+  } catch(e) {
+    window.location.replace('login.html');
+  }
+})();
+</script>
+</body>
+</html>
