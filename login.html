@@ -17,28 +17,31 @@ body {
   background: var(--bg); color: var(--text); min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
 }
-.login-container { width: 400px; max-width: 92vw; }
-.login-header { text-align: center; margin-bottom: 24px; }
-.login-header .logo { font-size: 36px; margin-bottom: 8px; }
-.login-header h1 { font-size: 24px; font-weight: 700; }
-.login-header p { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
-.card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 32px 28px; }
-.tabs { display: flex; margin-bottom: 24px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
-.tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); transition: var(--transition); }
+.login-container { width: 420px; max-width: 92vw; }
+.login-header { text-align: center; margin-bottom: 20px; }
+.login-header .logo { font-size: 36px; margin-bottom: 6px; }
+.login-header h1 { font-size: 22px; font-weight: 700; }
+.login-header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.card { background: var(--bg-card); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 28px 26px; }
+.tabs { display: flex; margin-bottom: 22px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
+.tab-btn { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-secondary); transition: var(--transition); }
 .tab-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
 .form-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; }
 .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
 .btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition); }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 #registerFields { display: none; }
-.msg { font-size: 13px; text-align: center; min-height: 20px; margin-top: 12px; }
+.msg { font-size: 13px; text-align: center; min-height: 20px; margin-top: 10px; line-height: 1.5; }
 .msg.error { color: var(--danger); }
 .msg.success { color: var(--success); }
-#debug { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; word-break: break-all; }
+.invite-box { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; text-align: center; display: none; }
+.invite-box .code { font-size: 22px; font-weight: 700; color: #166534; letter-spacing: 2px; font-family: monospace; }
+.invite-box .hint { font-size: 11px; color: #166534; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -46,7 +49,7 @@ body {
   <div class="login-header">
     <div class="logo">📋</div>
     <h1>工作面板</h1>
-    <p>多设备同步 · 数据私有 · 云端存储</p>
+    <p>多设备同步 · 邀请码注册</p>
   </div>
 
   <div class="card">
@@ -56,23 +59,44 @@ body {
     </div>
 
     <form id="authForm">
-      <div class="form-group">
-        <label>邮箱</label>
-        <input type="email" id="email" placeholder="请输入邮箱地址" autocomplete="email" required>
+      <!-- 登录模式：用户名或邮箱 -->
+      <div class="form-group" id="loginAccountGroup">
+        <label>用户名 / 邮箱</label>
+        <input type="text" id="loginAccount" placeholder="输入用户名或邮箱" autocomplete="username">
       </div>
-      <div class="form-group">
-        <label>密码</label>
-        <input type="password" id="password" placeholder="请输入密码（至少6位）" minlength="6" maxlength="64" required>
-      </div>
+
+      <!-- 注册模式：用户名 + 邮箱 -->
       <div id="registerFields">
         <div class="form-group">
-          <label>显示名称</label>
-          <input type="text" id="displayName" placeholder="如何称呼你？（可选）" maxlength="20">
+          <label>用户名</label>
+          <input type="text" id="regUsername" placeholder="设置登录用户名" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" id="regEmail" placeholder="请输入邮箱地址" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label>邀请码</label>
+          <input type="text" id="inviteCode" placeholder="输入邀请码（必填）" maxlength="20" style="text-transform:uppercase;letter-spacing:2px;">
+          <div class="form-hint" id="inviteHint"></div>
         </div>
       </div>
+
+      <!-- 密码：两种模式共用 -->
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="password" placeholder="请输入密码（至少6位）" minlength="6" maxlength="64" autocomplete="current-password">
+      </div>
+
       <button type="submit" class="btn btn-primary" id="submitBtn">登 录</button>
       <div class="msg" id="msg"></div>
-      <div id="debug"></div>
+
+      <!-- 注册成功后显示邀请码 -->
+      <div class="invite-box" id="inviteBox">
+        <div style="font-size:13px;color:#166534;margin-bottom:6px;">🎉 注册成功！你的邀请码：</div>
+        <div class="code" id="myInviteCode"></div>
+        <div class="hint">可分享给 3 位朋友注册（即将跳转...）</div>
+      </div>
     </form>
   </div>
 </div>
@@ -83,19 +107,10 @@ body {
 (function() {
   var msgEl = document.getElementById('msg');
   var btnEl = document.getElementById('submitBtn');
-  var dbgEl = document.getElementById('debug');
+  var inviteBox = document.getElementById('inviteBox');
 
-  function showDebug(txt) { dbgEl.textContent = txt; }
-
-  // Check config loaded
-  showDebug('加载配置...');
-  if (typeof SUPABASE_URL === 'undefined') {
-    msgEl.className = 'msg error';
-    msgEl.textContent = 'supabase-config.js 加载失败';
-    btnEl.disabled = true;
-    return;
-  }
-  if (SUPABASE_URL.indexOf('YOUR_PROJECT_ID') >= 0) {
+  // Check config
+  if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID') >= 0) {
     msgEl.className = 'msg error';
     msgEl.textContent = '请先配置 supabase-config.js';
     btnEl.disabled = true;
@@ -103,91 +118,209 @@ body {
   }
 
   // Init Supabase
-  showDebug('初始化 Supabase: ' + SUPABASE_URL);
   var supabase;
   try {
-    if (!window.supabase) throw new Error('Supabase SDK 未加载');
+    if (!window.supabase) throw new Error('SDK 未加载');
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    showDebug('Supabase 初始化成功');
   } catch(e) {
-    showDebug('初始化错误: ' + e.message);
     msgEl.className = 'msg error';
     msgEl.textContent = '初始化失败: ' + e.message;
     btnEl.disabled = true;
     return;
   }
 
-  // Tab switching
+  // Mode switching
   var mode = 'login';
+  var loginAccountGroup = document.getElementById('loginAccountGroup');
+  var registerFields = document.getElementById('registerFields');
+
   document.getElementById('tabLogin').addEventListener('click', function() {
     mode = 'login';
     document.getElementById('tabLogin').classList.add('active');
     document.getElementById('tabRegister').classList.remove('active');
-    document.getElementById('registerFields').style.display = 'none';
+    loginAccountGroup.style.display = 'block';
+    registerFields.style.display = 'none';
     btnEl.textContent = '登 录';
-    msgEl.textContent = '';
+    msgEl.textContent = ''; msgEl.className = 'msg';
+    inviteBox.style.display = 'none';
   });
+
   document.getElementById('tabRegister').addEventListener('click', function() {
     mode = 'register';
     document.getElementById('tabRegister').classList.add('active');
     document.getElementById('tabLogin').classList.remove('active');
-    document.getElementById('registerFields').style.display = 'block';
+    loginAccountGroup.style.display = 'none';
+    registerFields.style.display = 'block';
     btnEl.textContent = '注 册';
-    msgEl.textContent = '';
+    msgEl.textContent = ''; msgEl.className = 'msg';
+    inviteBox.style.display = 'none';
+    checkInviteNeeded();
   });
+
+  // Check if there are any invitation codes (first user = no code needed)
+  async function checkInviteNeeded() {
+    var hint = document.getElementById('inviteHint');
+    try {
+      var r = await supabase.from('invitation_codes').select('code', { count: 'exact', head: true });
+      if (!r.count || r.count === 0) {
+        hint.textContent = '你是第一个用户，无需邀请码';
+        hint.style.color = 'var(--success)';
+      } else {
+        hint.textContent = '需要有效的邀请码才能注册';
+        hint.style.color = 'var(--text-muted)';
+      }
+    } catch(e) {
+      hint.textContent = '需要有效的邀请码才能注册';
+    }
+  }
+
+  // Login with username or email
+  async function doLogin(account, password) {
+    var email = account;
+    // Check if it's not an email (username)
+    if (account.indexOf('@') === -1) {
+      msgEl.textContent = '查找用户...';
+      // Look up email by username in profiles
+      var r = await supabase.from('profiles').select('id').eq('username', account).maybeSingle();
+      if (r.error || !r.data) {
+        throw new Error('用户名不存在');
+      }
+      // We need the email, so use RPC
+      var rpc = await supabase.rpc('get_email_by_username', { p_username: account });
+      if (rpc.error || !rpc.data) {
+        throw new Error('无法获取用户邮箱');
+      }
+      email = rpc.data;
+    }
+    var result = await supabase.auth.signInWithPassword({ email: email, password: password });
+    if (result.error) throw result.error;
+    return result;
+  }
+
+  // Register with username + email + password + invitation code
+  async function doRegister(username, email, password, inviteCode) {
+    // Validate invitation code
+    if (inviteCode) {
+      var r = await supabase.from('invitation_codes').select('*').eq('code', inviteCode.toUpperCase()).maybeSingle();
+      if (r.error || !r.data) {
+        throw new Error('邀请码无效');
+      }
+      if (r.data.used_count >= r.data.max_uses) {
+        throw new Error('邀请码已达使用上限（3人）');
+      }
+    }
+
+    // Register with Supabase Auth
+    var result = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: { data: { username: username } }
+    });
+    if (result.error) throw result.error;
+    if (!result.data.user) throw new Error('注册失败');
+
+    var userId = result.data.user.id;
+
+    // Create profile with username (using service_role bypass via RLS insert policy)
+    // We need to use supabase directly - since the user just signed up, they're authenticated
+    // But the session might not be set yet if email confirmation is on...
+    // Try using the session if available
+    if (result.data.session) {
+      // Create profile
+      var pResult = await supabase.from('profiles').insert({
+        id: userId,
+        username: username
+      });
+      if (pResult.error) {
+        if (pResult.message && pResult.message.indexOf('duplicate') >= 0) {
+          throw new Error('用户名已被占用');
+        }
+        throw new Error('创建资料失败: ' + pResult.message);
+      }
+
+      // Use invitation code if provided
+      if (inviteCode) {
+        await supabase.rpc('validate_and_use_code', { p_code: inviteCode.toUpperCase(), p_new_owner: userId });
+      }
+
+      // Generate invitation code for new user
+      var codeResult = await supabase.rpc('generate_invitation_code', { p_user_id: userId });
+    }
+
+    return result;
+  }
 
   // Submit handler
   document.getElementById('authForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     msgEl.className = 'msg';
     msgEl.textContent = '';
+    inviteBox.style.display = 'none';
 
-    var email = document.getElementById('email').value.trim();
     var password = document.getElementById('password').value;
-    var displayName = document.getElementById('displayName').value.trim();
-
-    if (!email || !password) { msgEl.className = 'msg error'; msgEl.textContent = '请输入邮箱和密码'; return; }
-    if (password.length < 6) { msgEl.className = 'msg error'; msgEl.textContent = '密码至少 6 位'; return; }
+    if (!password || password.length < 6) {
+      msgEl.className = 'msg error'; msgEl.textContent = '密码至少 6 位'; return;
+    }
 
     btnEl.disabled = true;
     btnEl.textContent = '处理中...';
-    showDebug('正在请求...');
 
     try {
       if (mode === 'login') {
-        showDebug('登录: ' + email);
-        var result = await supabase.auth.signInWithPassword({ email: email, password: password });
-        if (result.error) throw result.error;
-        showDebug('登录成功，跳转...');
+        var account = document.getElementById('loginAccount').value.trim();
+        if (!account) { msgEl.className = 'msg error'; msgEl.textContent = '请输入用户名或邮箱'; btnEl.disabled = false; btnEl.textContent = '登 录'; return; }
+        await doLogin(account, password);
         window.location.href = 'app.html';
       } else {
-        showDebug('注册: ' + email);
-        var result = await supabase.auth.signUp({
-          email: email,
-          password: password,
-          options: { data: { display_name: displayName || email.split('@')[0] } }
-        });
-        if (result.error) throw result.error;
-        showDebug('注册返回: session=' + !!result.data.session);
+        var username = document.getElementById('regUsername').value.trim();
+        var email = document.getElementById('regEmail').value.trim();
+        var inviteCode = document.getElementById('inviteCode').value.trim();
+
+        if (!username) { msgEl.className = 'msg error'; msgEl.textContent = '请设置用户名'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
+        if (username.length < 2) { msgEl.className = 'msg error'; msgEl.textContent = '用户名至少 2 个字符'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
+        if (!email) { msgEl.className = 'msg error'; msgEl.textContent = '请输入邮箱'; btnEl.disabled = false; btnEl.textContent = '注 册'; return; }
+
+        // Check if invite code is required
+        var hintText = document.getElementById('inviteHint').textContent;
+        var isFirstUser = hintText.indexOf('无需邀请码') >= 0;
+        if (!isFirstUser && !inviteCode) {
+          msgEl.className = 'msg error'; msgEl.textContent = '请输入邀请码'; btnEl.disabled = false; btnEl.textContent = '注 册'; return;
+        }
+
+        var result = await doRegister(username, email, password, inviteCode || null);
 
         if (result.data.session) {
-          window.location.href = 'app.html';
+          // Auto-login success - get generated code
+          var codeR = await supabase.from('invitation_codes').select('code').eq('owner_user_id', result.data.user.id).maybeSingle();
+          var myCode = codeR.data ? codeR.data.code : '';
+
+          if (myCode) {
+            document.getElementById('myInviteCode').textContent = myCode;
+            inviteBox.style.display = 'block';
+            btnEl.style.display = 'none';
+            msgEl.textContent = '';
+            // Auto redirect after 3 seconds
+            setTimeout(function() { window.location.href = 'app.html'; }, 3000);
+          } else {
+            window.location.href = 'app.html';
+          }
         } else {
           msgEl.className = 'msg success';
           msgEl.textContent = '注册成功！请查看邮箱确认链接';
           btnEl.disabled = false;
           btnEl.textContent = '注 册';
-          showDebug('需要邮箱验证');
         }
       }
     } catch (err) {
-      showDebug('错误: ' + (err.message || err));
       msgEl.className = 'msg error';
       msgEl.textContent = err.message || '操作失败';
       btnEl.disabled = false;
       btnEl.textContent = mode === 'login' ? '登 录' : '注 册';
     }
   });
+
+  // Initial check
+  checkInviteNeeded();
 })();
 </script>
 </body>
