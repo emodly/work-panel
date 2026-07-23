@@ -26,13 +26,13 @@ h1 { text-align:center; font-size:20px; margin-bottom:6px; }
 <body>
 <div class="box">
   <h1>📋 工作面板</h1>
-  <p class="sub">登录或注册账号</p>
+  <p class="sub" id="statusMsg">连接中...</p>
   <div class="tabs">
     <button class="tab on" id="tabLogin">登录</button>
     <button class="tab" id="tabReg">注册</button>
   </div>
   <form id="f">
-    <div class="fld"><input type="email" id="email" placeholder="邮箱地址" required></div>
+    <div class="fld"><input type="text" id="email" placeholder="输入邮箱注册/登录" required></div>
     <div class="fld"><input type="password" id="pwd" placeholder="密码（至少6位）" minlength="6" required></div>
     <button type="submit" class="btn" id="btn">登 录</button>
     <div class="msg" id="msg"></div>
@@ -43,28 +43,29 @@ h1 { text-align:center; font-size:20px; margin-bottom:6px; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
+  var msg = document.getElementById('msg');
+  var btn = document.getElementById('btn');
+  var status = document.getElementById('statusMsg');
+
   if (typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID') >= 0) {
-    document.getElementById('msg').innerHTML = '<span class="red">请配置 supabase-config.js</span>';
-    return;
+    msg.className = 'msg red'; msg.textContent = '请配置 supabase-config.js'; return;
   }
+
   var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   var mode = 'login';
-  var btn = document.getElementById('btn');
-  var msg = document.getElementById('msg');
+  status.textContent = '已连接 Supabase ✓';
 
   document.getElementById('tabLogin').onclick = function(){
     mode = 'login';
     document.getElementById('tabLogin').classList.add('on');
     document.getElementById('tabReg').classList.remove('on');
-    btn.textContent = '登 录';
-    msg.textContent = '';
+    btn.textContent = '登 录'; msg.textContent = '';
   };
   document.getElementById('tabReg').onclick = function(){
     mode = 'reg';
     document.getElementById('tabReg').classList.add('on');
     document.getElementById('tabLogin').classList.remove('on');
-    btn.textContent = '注 册';
-    msg.textContent = '';
+    btn.textContent = '注 册'; msg.textContent = '';
   };
 
   document.getElementById('f').onsubmit = async function(e){
@@ -72,7 +73,7 @@ h1 { text-align:center; font-size:20px; margin-bottom:6px; }
     msg.className = 'msg';
     var email = document.getElementById('email').value.trim();
     var pwd = document.getElementById('pwd').value;
-    if (!email || !pwd || pwd.length < 6) {
+    if (!email || pwd.length < 6) {
       msg.className = 'msg red'; msg.textContent = '请输入正确的邮箱和密码（至少6位）'; return;
     }
     btn.disabled = true;
@@ -87,10 +88,10 @@ h1 { text-align:center; font-size:20px; margin-bottom:6px; }
       if (r.error) {
         if (r.error.message.indexOf('Invalid login') >= 0) throw new Error('邮箱或密码错误');
         if (r.error.message.indexOf('already registered') >= 0) throw new Error('该邮箱已注册，请直接登录');
-        if (r.error.message.indexOf('User already registered') >= 0) throw new Error('该邮箱已注册，请直接登录');
         throw r.error;
       }
       if (r.data.session || r.data.user) {
+        status.textContent = '登录成功，跳转中...';
         window.location.href = 'app.html';
       } else {
         msg.className = 'msg green';
@@ -99,7 +100,7 @@ h1 { text-align:center; font-size:20px; margin-bottom:6px; }
       }
     } catch(err) {
       msg.className = 'msg red';
-      msg.textContent = err.message || '操作失败';
+      msg.textContent = err.message || '操作失败（可能是网络问题，请重试）';
       btn.disabled = false;
       btn.textContent = mode === 'login' ? '登 录' : '注 册';
     }
