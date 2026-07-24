@@ -164,6 +164,7 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
     <button class="tab-btn" onclick="switchTab('stats')">统计</button>
   </div>
   <button class="btn btn-outline" onclick="openSettings()" title="个人设置" style="flex-shrink:0;">⚙️</button>
+  <button class="btn btn-outline" onclick="doLogout()" title="退出登录" style="flex-shrink:0;">🚪</button>
 </div>
 
 <div class="main">
@@ -270,6 +271,8 @@ function cloudPull(){
     apiFetch('/rest/v1/summaries?select=*', 'GET')
   ]).then(function(results){
     var tData = results[0], sData = results[1];
+    var hasCloudData = (Array.isArray(tData) && tData.length>0) || (Array.isArray(sData) && sData.length>0);
+    if(!hasCloudData){ _origSave(); render(); return; }
     if(Array.isArray(tData) && tData.length>0){
       var cloudMap={}; tData.forEach(function(t){ cloudMap[t.id]=t; });
       var merged=[], localTasks = JSON.parse(localStorage.getItem('wp_full')||'{"tasks":[]}').tasks;
@@ -545,6 +548,14 @@ function saveSettings(){
     toast('✅ 设置已保存');
   }
   closeSettings();
+}
+
+function doLogout(){
+  var sessionKey = 'sb-' + SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token';
+  localStorage.removeItem(sessionKey);
+  supabaseReady = false; supabaseToken = null;
+  toast('已退出登录');
+  setTimeout(function(){ window.location.href = 'login.html'; }, 500);
 }
 
 function clearAllData(){
