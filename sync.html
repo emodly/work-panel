@@ -6,7 +6,6 @@
 <title>工作面板</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="supabase-config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8/dist/umd/supabase.min.js"></script>
 <style>
 :root { --primary: #4F46E5; --primary-light: #EEF2FF; --bg: #F1F5F9; --bg-card: #FFFFFF; --text: #1E293B; --text-secondary: #64748B; --text-muted: #94A3B8; --border: #E2E8F0; --success: #10B981; --warning: #F59E0B; --danger: #EF4444; --info: #3B82F6; --radius: 10px; --radius-sm: 6px; --shadow: 0 1px 3px rgba(0,0,0,0.08); --shadow-lg: 0 10px 30px rgba(0,0,0,0.1); }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -149,6 +148,7 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 </style>
 </head>
 <body>
+<div id="syncBar" style="display:none;background:#EEF2FF;color:#4F46E5;text-align:center;padding:4px;font-size:11px;font-weight:600;"></div>
 <div class="header">
   <h1>📋 工作面板</h1>
   <div class="date-nav">
@@ -219,72 +219,94 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 var currentDate = todayStr(), currentTab = 'dash', editId = null, weekOff = 0, monthOff = 0;
 var data = JSON.parse(localStorage.getItem('wp_full') || '{"tasks":[],"summaries":[]}');
 var charts = {};
-var supabase = null;
 var supabaseReady = false;
+var supabaseToken = null;
 
-// Init Supabase sync
+// Init Supabase sync using fetch (no SDK needed)
 (function initSupabase(){
-  if(typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID')>=0) return;
-  try{
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    supabase.auth.getSession().then(function(r){
-      if(r.data&&r.data.session){ supabaseReady = true; cloudPush().then(function(){ cloudPull(); }); }
-    });
-  }catch(e){ console.log('Supabase init skipped'); }
+  var bar = document.getElementById('syncBar');
+  if(typeof SUPABASE_URL === 'undefined' || SUPABASE_URL.indexOf('YOUR_PROJECT_ID')>=0){
+    bar.style.display='block'; bar.style.background='#FEF2F2'; bar.style.color='#EF4444';
+    bar.textContent='⚠️ Supabase 未配置，数据仅存本地';
+    return;
+  }
+  bar.style.display='block'; bar.textContent='🔍 检查登录状态...';
+  // Read session from localStorage (stored by login.html)
+  var sessionKey = 'sb-' + SUPABASE_URL.split('//')[1].split('.')[0] + '-auth-token';
+  try {
+    var stored = JSON.parse(localStorage.getItem(sessionKey) || '{}');
+    if (stored && stored.access_token) {
+      supabaseToken = stored.access_token;
+      supabaseReady = true;
+      bar.textContent='☁️ 已登录，同步中...';
+      cloudPush().then(function(){
+        cloudPull().then(function(){
+          bar.textContent='✅ 数据已同步到云端';
+          setTimeout(function(){ bar.style.display='none'; }, 2500);
+        });
+      });
+    } else {
+      bar.textContent='📋 离线模式（未登录，数据存本地）';
+      bar.style.background='#FFF7ED'; bar.style.color='#C2410C';
+    }
+  } catch(e) {
+    bar.textContent='📋 离线模式';
+    bar.style.background='#FFF7ED'; bar.style.color='#C2410C';
+  }
 })();
 
+function apiFetch(path, method, body){
+  var headers = { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  if(supabaseToken) headers['Authorization'] = 'Bearer ' + supabaseToken;
+  var opts = { method: method, headers: headers };
+  if(body) opts.body = JSON.stringify(body);
+  return fetch(SUPABASE_URL + path, opts).then(function(r){ return r.json(); });
+}
+
 function cloudPull(){
-  if(!supabaseReady) return;
-  supabase.from('tasks').select('*').order('date').order('order').then(function(r){
-    if(!r.error && r.data && r.data.length>0){
-      var local = JSON.parse(localStorage.getItem('wp_full')||'{"tasks":[],"summaries":[]}');
-      // Merge: Supabase wins for same ID, keep local-only tasks
-      var cloudMap={}; r.data.forEach(function(t){ cloudMap[t.id]=t; });
-      var merged=[];
-      // Update existing + add cloud tasks
-      local.tasks.forEach(function(t){
-        if(cloudMap[t.id]){ merged.push(cloudMap[t.id]); delete cloudMap[t.id]; }
-        else merged.push(t);
-      });
-      // Add remaining cloud tasks
+  if(!supabaseReady) return Promise.resolve();
+  return Promise.all([
+    apiFetch('/rest/v1/tasks?select=*&order=date.asc,order.asc', 'GET'),
+    apiFetch('/rest/v1/summaries?select=*', 'GET')
+  ]).then(function(results){
+    var tData = results[0], sData = results[1];
+    if(Array.isArray(tData) && tData.length>0){
+      var cloudMap={}; tData.forEach(function(t){ cloudMap[t.id]=t; });
+      var merged=[], localTasks = JSON.parse(localStorage.getItem('wp_full')||'{"tasks":[]}').tasks;
+      localTasks.forEach(function(t){ if(cloudMap[t.id]){ merged.push(cloudMap[t.id]); delete cloudMap[t.id]; } else merged.push(t); });
       Object.values(cloudMap).forEach(function(t){ merged.push(t); });
       data.tasks = merged;
     }
-  }).catch(function(e){ console.log('Pull tasks error'); });
-
-  supabase.from('summaries').select('*').then(function(r){
-    if(!r.error && r.data && r.data.length>0){
-      var local = JSON.parse(localStorage.getItem('wp_full')||'{"tasks":[],"summaries":[]}');
-      var cloudMap={}; r.data.forEach(function(s){ cloudMap[s.date]=s; });
-      local.summaries.forEach(function(s){ if(cloudMap[s.date]){ s.content=cloudMap[s.date].content; s.updatedAt=cloudMap[s.date].updated_at; delete cloudMap[s.date]; } });
-      Object.values(cloudMap).forEach(function(s){ local.summaries.push({date:s.date,content:s.content,updatedAt:s.updated_at}); });
-      data.summaries = local.summaries;
+    if(Array.isArray(sData) && sData.length>0){
+      var sCloud={}; sData.forEach(function(s){ sCloud[s.date]=s; });
+      var localSums = JSON.parse(localStorage.getItem('wp_full')||'{"summaries":[]}').summaries;
+      localSums.forEach(function(s){ if(sCloud[s.date]){ s.content=sCloud[s.date].content; s.updatedAt=sCloud[s.date].updated_at; delete sCloud[s.date]; } });
+      Object.values(sCloud).forEach(function(s){ localSums.push({date:s.date,content:s.content,updatedAt:s.updated_at}); });
+      data.summaries = localSums;
     }
-    save(); render();
-  }).catch(function(e){ console.log('Pull summaries error'); });
+    _origSave();
+    render();
+  });
 }
 
 function cloudPush(){
   if(!supabaseReady) return Promise.resolve();
   var promises = [];
   data.tasks.forEach(function(t){
-    promises.push(supabase.from('tasks').upsert({
-      id:t.id, date:t.date, title:t.title, description:t.description||'',
-      time_slot:t.timeSlot||'morning', priority:t.priority, status:t.status,
-      category:t.category, "order":t.order, task_time:t.taskTime||''
-    }));
+    var task = { id:t.id, date:t.date, title:t.title, description:t.description||'', time_slot:t.timeSlot||'morning', priority:t.priority||'medium', status:t.status||'pending', category:t.category||'其他', 'order':t.order||0, task_time:t.taskTime||'' };
+    promises.push(apiFetch('/rest/v1/tasks', 'POST', task).catch(function(){ return apiFetch('/rest/v1/tasks?id=eq.'+t.id, 'PATCH', task); }));
   });
   data.summaries.forEach(function(s){
-    promises.push(supabase.from('summaries').upsert({date:s.date,content:s.content}));
+    promises.push(apiFetch('/rest/v1/summaries', 'POST', {date:s.date,content:s.content||''}).catch(function(){ return apiFetch('/rest/v1/summaries?date=eq.'+s.date, 'PATCH', {content:s.content||''}); }));
   });
   return Promise.all(promises);
 }
 
-// Override save to also sync to cloud
+// Save also syncs
 var _origSave = save;
 save = function(){
   _origSave();
-  cloudPush();
+  if(supabaseReady) cloudPush();
 };
 
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
