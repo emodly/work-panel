@@ -228,7 +228,7 @@ var supabaseReady = false;
   try{
     supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     supabase.auth.getSession().then(function(r){
-      if(r.data&&r.data.session){ supabaseReady = true; cloudPull(); }
+      if(r.data&&r.data.session){ supabaseReady = true; cloudPush().then(function(){ cloudPull(); }); }
     });
   }catch(e){ console.log('Supabase init skipped'); }
 })();
@@ -265,17 +265,19 @@ function cloudPull(){
 }
 
 function cloudPush(){
-  if(!supabaseReady) return;
+  if(!supabaseReady) return Promise.resolve();
+  var promises = [];
   data.tasks.forEach(function(t){
-    supabase.from('tasks').upsert({
+    promises.push(supabase.from('tasks').upsert({
       id:t.id, date:t.date, title:t.title, description:t.description||'',
       time_slot:t.timeSlot||'morning', priority:t.priority, status:t.status,
       category:t.category, "order":t.order, task_time:t.taskTime||''
-    }).then(function(){});
+    }));
   });
   data.summaries.forEach(function(s){
-    supabase.from('summaries').upsert({date:s.date,content:s.content}).then(function(){});
+    promises.push(supabase.from('summaries').upsert({date:s.date,content:s.content}));
   });
+  return Promise.all(promises);
 }
 
 // Override save to also sync to cloud
